@@ -111,6 +111,38 @@ def new_registration():
     resp = requests.post(url, data=json.dumps(payload), headers=headers)
     return '{}\n'
 
+@app.route("/v1/forgotpassword", methods = ["POST"])
+def forgot_password():
+    email = request.form['email']
+    password = request.form['password']
+    connection = get_db()
+    cursor = connection.cursor()
+    cursor.execute("SELECT email from users WHERE email = %s", (email,))
+    if cursor.fetchone():
+        headers = {"api-key": sendinblue_key}
+        url = "https://api.sendinblue.com/v2.0/email"
+        verification_code = str(uuid.uuid4()).replace("-","")
+        body = '''Hi,<br/><br/>your request for changing the password has been recieved. <br/>
+        Your new password would be activated upon opening this link:
+
+        <a href="https://api.mt2414.in/v1/verifications/%s">https://api.mt2414.in/v1/verifications/%s</a>
+
+        <br/><br/>The documentation for accessing the API is available at <a href="http://docs.mt2414.in">docs.mt2414.in</a>''' % (verification_code, verification_code)
+        payload = {
+            "to": {email: ""},
+            "from": ["noreply@mt2414.in","Mt. 24:14"],
+            "subject": "MT2414 - Password change verification mail",
+            "html": body,
+            }
+        password_salt = str(uuid.uuid4()).replace("-","")
+        password_hash = scrypt.hash(password, password_salt)
+        cursor.execute("UPDATE users SET email_verified = False, verification_code = %s, password_hash = %s, password_salt = %s, created_at = current_timestamp WHERE email = %s", (verification_code, password_hash, password_salt, email))
+        connection.commit()
+        resp = requests.post(url, data=json.dumps(payload), headers=headers)
+        return '{}\n'
+    else:
+        return 'email has not yet been registered'
+    return '{}\n'
 
 class TokenError(Exception):
 
