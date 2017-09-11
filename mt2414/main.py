@@ -677,6 +677,8 @@ def tokenlist():
     revision = req["revision"]
     targetlang = req["targetlang"]
     book_list = req["book_list"]
+    if len(book_list) == 0:
+        return '{"success":false, "message":"Select any books."}'
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute("SELECT id FROM sources WHERE language = %s AND version = %s", (sourcelang, version))
