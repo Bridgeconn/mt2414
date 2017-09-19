@@ -21,3 +21,4 @@ setuptools==25.1.1
 six==1.10.0
 Werkzeug==0.11.15
 pyexcel==0.5.2
+pyotp==2.2.6
