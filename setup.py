@@ -15,6 +15,7 @@ setup(
         "psycopg2",
         "scrypt",
         "gunicorn",
-        "pyexcel"
+        "pyexcel",
+	"pyotp"
         ],
 )
