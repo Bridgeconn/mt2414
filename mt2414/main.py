@@ -325,6 +325,7 @@ def sourceid():
 @check_token
 def sources():
     files = request.files['content']
+
     read_file = files.read()
     source_id = request.form["source_id"]
     auth = request.headers.get('Authorization', None)
@@ -565,6 +566,8 @@ def bookwiseagt():
     include_books = req["books"]
     exclude_books = req["nbooks"]
     targetlang = req["targetlang"]
+    if len(include_books) == 0:
+        return '{"success":false, "message":"Select any books from include books."}', 400
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute("SELECT id FROM sources WHERE language = %s AND version = %s", (sourcelang, version))
@@ -573,11 +576,6 @@ def bookwiseagt():
     if not source_id:
         return '{"success":false, "message":"Source is not available. Upload source."}'
     else:
-        if not include_books and not exclude_books:
-            return '{"success":false, "message":"Select any books from include books"}'
-        elif not include_books and exclude_books:
-            return '{"success":false, "message":"Select any books from include books"}'
-
         book_name = []
         cursor.execute("SELECT book_name FROM cluster WHERE source_id =%s AND revision_num = %s", (source_id[0], revision))
         rst = cursor.fetchall()
@@ -678,7 +676,7 @@ def tokenlist():
     targetlang = req["targetlang"]
     book_list = req["book_list"]
     if len(book_list) == 0:
-        return '{"success":false, "message":"Select any books."}'
+        return '{"success":false, "message":"Select any books."}', 400
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute("SELECT id FROM sources WHERE language = %s AND version = %s", (sourcelang, version))
