@@ -47,6 +47,8 @@ postgres_port = os.environ.get("MT2414_POSTGRES_PORT", "5432")
 postgres_user = os.environ.get("MT2414_POSTGRES_USER", "postgres")
 postgres_password = os.environ.get("MT2414_POSTGRES_PASSWORD", "secret")
 postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE", "postgres")
+host_api_url = os.environ.get("MT2414_HOST_API_URL")
+host_ui_url = os.environ.get("MT2414_HOST_UI_URL")
 
 def get_db():                                                                      #--------------To open database connection-------------------#
     """Opens a new database connection if there is none yet for the
@@ -98,9 +100,9 @@ def new_registration():
     body = '''Hi,<br/><br/>Thanks for your interest to use the AutographaMT web service. <br/>
     You need to confirm your email by opening this link:
 
-    <a href="https://api.mt2414.in/v1/verifications/%s">https://api.mt2414.in/v1/verifications/%s</a>
+    <a href="https://%s/v1/verifications/%s">https://%s/v1/verifications/%s</a>
 
-    <br/><br/>The documentation for accessing the API is available at <a href="http://docs.mt2414.in">docs.mt2414.in</a>''' % (verification_code, verification_code)
+    <br/><br/>The documentation for accessing the API is available at <a href="https://docs.autographamt.com">https://docs.autographamt.com</a>''' % (host_api_url, verification_code, host_api_url, verification_code)
     payload = {
         "to": {email: ""},
         "from": ["noreply@autographamt.in", "Autographa MT"],
@@ -138,9 +140,9 @@ def reset_password():
         body = '''Hi,<br/><br/>your request for resetting the password has been recieved. <br/>
         Your temporary password is %s. Enter your new password by opening this link:
 
-        <a href="http://autographamt.com/forgotpassword">http://autographamt.com/forgotpassword</a>
+        <a href="https://%s/forgotpassword">https://%s/forgotpassword</a>
 
-        <br/><br/>The documentation for accessing the API is available at <a href="http://docs.mt2414.in">docs.mt2414.in</a>''' % (verification_code)
+        <br/><br/>The documentation for accessing the API is available at <a href="https://docs.autographamt.com">https://docs.autographamt.com</a>''' % (verification_code, host_ui_url, host_ui_url)
         payload = {
             "to": {email: ""},
             "from": ["noreply@autographamt.in", "AutographaMT"],
@@ -264,7 +266,7 @@ def new_registration2(code):
         cursor.execute("UPDATE users SET email_verified = True WHERE verification_code = %s", (code,))
     cursor.close()
     connection.commit()
-    return redirect("http://autographamt.com/")
+    return redirect("https://%s/" % (host_ui_url))
 
 @app.route("/v1/createsources", methods=["POST"])                     #--------------For creating new source (admin) -------------------#
 @check_token
