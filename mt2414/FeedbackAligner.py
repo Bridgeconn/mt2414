@@ -351,24 +351,40 @@ class FeedbackAligner:
 		for row in cur.fetchall():
 			trg_word_list.append((row[0],row[1]))
 
+		
+		# get aligned Eng(ULB) text for src(Greek)
 		temp_src_word_list = src_word_list
 		src_word_list = []
 		for i,src_pair in enumerate(temp_src_word_list):
-			# print(src_pair)
-			# print("SELECT english FROM lid_lxn_grk_eng WHERE lid = LEFT('"+src_pair[1]+"',5) and strong = CONCAT('g',LPAD('"+src_pair[0]+"',4,'0'),'0') ")
-			cur.execute("SELECT english FROM lid_lxn_grk_eng WHERE lid = LEFT('"+src_pair[1]+"',5) and strong = CONCAT('g',LPAD('"+src_pair[0]+"',4,'0'),'0') ")
-			if cur.rowcount==0:
-				src_word_list.append((src_pair[0],src_pair[1],""))
-			elif cur.rowcount==1:
-				src_word_list.append((src_pair[0],src_pair[1],cur.fetchone()[0]))
+			
+			# cur.execute("SELECT a.lid FROM bcv_lid_map_7957 as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
+			cur.execute("SELECT a.lid FROM bcv_lid_map as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
+
+			lid_7957set = cur.fetchone()[0]
+
+
+			cur.execute("SELECT english FROM lid_lxn_grk_eng WHERE lid = '"+str(lid_7957set)+"' and strong = CONCAT('g',LPAD('"+src_pair[0]+"',4,'0'),'0') ")
+			# print("SELECT english FROM lid_lxn_grk_eng WHERE lid = '"+str(lid_7957set)+"' and strong = CONCAT('g',LPAD('"+src_pair[0]+"',4,'0'),'0') ")
+			query_result = cur.fetchall()
+			if len(query_result)==0:
+				src_word_list.append((src_pair[0],src_pair[1],"--"))
+			elif len(query_result)==1:
+				src_word_list.append((src_pair[0],src_pair[1],query_result[0]))
 			else:
-				eng_list = [x[0] for x in cur.fetchall()]
+				eng_list = [x[0] for x in query_result]
 				strng_in_src_list = []
 				for j,pair in enumerate(temp_src_word_list):
 					if pair[0] == src_pair[0]:
 						strng_in_src_list.append(j)
-				aligned_eng = eng_list[strng_in_src_list.index(i)]
-				src_word_list.append((src_pair[0],src_pair[1],aligned_eng))
+				# print("eng_list:"+str(eng_list))
+				# print("strng_in_src_list:"+str(strng_in_src_list))
+				# print("i:"+str(i))
+				if strng_in_src_list.index(i) < len(eng_list): 
+					aligned_eng = eng_list[strng_in_src_list.index(i)]
+					src_word_list.append((src_pair[0],src_pair[1],aligned_eng))
+				else:
+					# not the correct solution. but added to remove the unexplained error
+					src_word_list.append((src_pair[0],src_pair[1],query_result[0]))	
 
 
 
@@ -545,10 +561,17 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 
-	connection =  pymysql.connect(host="localhost",    # your host, usually localhost
-	                     user="root",         # your username
-	                     password="password",  # your password
-	                     database="itl_db",
+	# connection =  pymysql.connect(host="localhost",    # your host, usually localhost
+	#                      user="root",         # your username
+	#                      password="password",  # your password
+	#                      database="itl_db",
+	#                      charset='utf8mb4')
+
+	connection =  pymysql.connect(host="103.196.222.37",    # your host, usually localhost
+	                     user="bcs_vo_owner",         # your username
+	                     password="bcs@0pen",  # your password
+	                     database="bcs_vachan_engine_test",
+	                     port=13306,
 	                     charset='utf8mb4')
 		
 
@@ -559,11 +582,11 @@ if __name__ == '__main__':
 	
 	# obj.on_approve_feedback([("2424 5547","यीशु मसीह"),("5207","सन्तान"),("5257 5547","मसीह . सेवक")])
 
-	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options = obj.fetch_alignment('23146','grk_hin_sw_stm_ne_giza_tw__alignment')
-	print("src_word_list:"+str(src_word_list))
+	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options = obj.fetch_alignment('26021','grk_hin_sw_stm_ne_giza_tw__alignment')
+	# print("src_word_list:"+str(src_word_list))
 	# print("trg_word_list:"+str(trg_word_list))
-	# print("auto_alignments:"+str(auto_alignments))
-	# print("corrected_alignments:"+str(corrected_alignments))
+	print("auto_alignments:"+str(auto_alignments))
+	print("corrected_alignments:"+str(corrected_alignments))
 	# print("replacement_options:"+str(replacement_options))
 
 
