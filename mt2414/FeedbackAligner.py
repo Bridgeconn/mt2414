@@ -357,8 +357,8 @@ class FeedbackAligner:
 		src_word_list = []
 		for i,src_pair in enumerate(temp_src_word_list):
 			
-			# cur.execute("SELECT a.lid FROM bcv_lid_map_7957 as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
-			cur.execute("SELECT a.lid FROM bcv_lid_map as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
+			cur.execute("SELECT a.lid FROM bcv_lid_map_7957 as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
+			# cur.execute("SELECT a.lid FROM bcv_lid_map as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
 
 			lid_7957set = cur.fetchone()[0]
 
