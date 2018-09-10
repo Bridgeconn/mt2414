@@ -8,7 +8,7 @@ import itertools
 import time, json
 import pymysql
 
-from TW_strongs_ref_lookup import TWs 
+from .TW_strongs_ref_lookup import TWs
 
 
 class FeedbackAligner:
@@ -361,6 +361,7 @@ class FeedbackAligner:
 			# cur.execute("SELECT a.lid FROM bcv_lid_map as a INNER JOIN bcv_lid_map_7914 as b on a.bcv =b.bcv where b.lid=LEFT('"+src_pair[1]+"',5)")
 
 			lid_7957set = cur.fetchone()[0]
+			# print(lid_7957set)
 
 
 			cur.execute("SELECT english FROM lid_lxn_grk_eng WHERE lid = '"+str(lid_7957set)+"' and strong = CONCAT('g',LPAD('"+src_pair[0]+"',4,'0'),'0') ")
@@ -422,6 +423,7 @@ class FeedbackAligner:
 		strong_list_edited = [x[1:] for x in strong_list]
 		
 		return_list = {}
+		pair_wise_alignments = []
 		
 		try:
 			for bcv in refs_list:
@@ -450,7 +452,7 @@ class FeedbackAligner:
 					if wrd[1] in strong_list_edited:
 						present_strongs.append(wrd)
 				present_strongs.sort()
-
+				
 				if (len(present_strongs)>0):
 					
 					for ps in present_strongs: 
@@ -459,11 +461,14 @@ class FeedbackAligner:
 						# if cur.rowcount > 0 :
 						# print(cur.fetchall())
 						retrived = [(x[0],x[1]) for x in cur.fetchall()]
+						for rtvd in retrived:
+							pair_wise_alignments.append(str((ps[0].split('_')[1],rtvd[0].split('_')[1])))
 						if len(retrived)>0:
 								if BCVs_dict[l] in return_list:
 									# print("***********Came here once************")
 									return_list[BCVs_dict[l] ]["strongs"].append(ps)
 									return_list[BCVs_dict[l] ]["target"] += retrived
+
 									# print()
 								else:
 									return_list[BCVs_dict[l]] = {}
@@ -497,7 +502,11 @@ class FeedbackAligner:
 					# print(trg_string+" --- "+strongs_string)
 					
 
-					return_list[BCVs_dict[l] ]=str((strongs_string,trg_string))
+					return_list[BCVs_dict[l]] = {}
+					return_list[BCVs_dict[l]]["words" ]=str((strongs_string,trg_string))
+					return_list[BCVs_dict[l]]["positions" ]=pair_wise_alignments
+				else:
+					pair_wise_alignments = []
 
 
 
@@ -571,6 +580,7 @@ if __name__ == '__main__':
 	                     user="bcs_vo_owner",         # your username
 	                     password="bcs@0pen",  # your password
 	                     database="bcs_vachan_engine_test",
+	                     # database="bcs_vachan_engine_open",
 	                     port=13306,
 	                     charset='utf8mb4')
 		
@@ -582,11 +592,11 @@ if __name__ == '__main__':
 	
 	# obj.on_approve_feedback([("2424 5547","यीशु मसीह"),("5207","सन्तान"),("5257 5547","मसीह . सेवक")])
 
-	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options = obj.fetch_alignment('26021','grk_hin_sw_stm_ne_giza_tw__alignment')
+	# src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options = obj.fetch_alignment('27883','grk_hin_sw_stm_ne_giza_tw__alignment')
 	# print("src_word_list:"+str(src_word_list))
 	# print("trg_word_list:"+str(trg_word_list))
-	print("auto_alignments:"+str(auto_alignments))
-	print("corrected_alignments:"+str(corrected_alignments))
+	# print("auto_alignments:"+str(auto_alignments))
+	# print("corrected_alignments:"+str(corrected_alignments))
 	# print("replacement_options:"+str(replacement_options))
 
 
@@ -598,10 +608,11 @@ if __name__ == '__main__':
 
 	# TW_alignments = obj.fetch_all_TW_alignments()
 	# TW_alignments = obj.fetch_seleted_TW_alignments([1,2,3,4,5])
+	TW_alignments = obj.fetch_seleted_TW_alignments(range(17,22))
 
-	# TW_alignments = obj.fetch_seleted_TW_alignments(range(1,6))
+	# TW_alignments = obj.fetch_seleted_TW_alignments([18])
 
-	# print(TW_alignments)
+	print(TW_alignments)
 
 	print("Time taken:"+str(time.clock()-start))
 	del obj
