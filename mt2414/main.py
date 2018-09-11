@@ -66,6 +66,7 @@ def connect_db():
         g.db = pymysql.connect(host=mysql_host,database=mysql_database, user=mysql_user, password=mysql_password, port=mysql_port, charset='utf8mb4')
     return g.db
 
+
 def get_db():                                                                      #--------------To open database connection-------------------#
     """Opens a new database connection if there is none yet for the
     current application context.
@@ -1266,13 +1267,23 @@ def getLid(bcv):
     return lid
 
 def parseAlignmentData(alignmentData):
+    connection = connect_db()
+    cursor = connection.cursor()
     source_text = ['' for i in range(len(alignmentData[0]))]
     englishword = ['' for i in range(len(alignmentData[0]))]
     for s_item in alignmentData[0]:
         index = s_item[1].split('_')[1]
         s_text = 'G' + s_item[0].zfill(4) + '0'
         source_text[int(index) - 1] = s_text
-        englishword[int(index) - 1] = ''.join(s_item[2])
+        english = ''.join(s_item[2])
+        if '-' in english:
+            cursor.execute("SELECT englishword from lxn_gre_eng WHERE strongsnumber = %s", ('g' + s_item[0]))
+            rst = cursor.fetchone()
+            eng_word = '* ' + ', '.join([' '.join(x.strip().split(' ')[0:-1]) \
+                                                                for x in rst[0].split(',')[0:4]])
+        else:
+            eng_word = ''.join(s_item[2])
+        englishword[int(index) - 1] = eng_word
 
     target_text = ['' for i in range(len(alignmentData[1]))]
     for t_item in alignmentData[1]:
@@ -1304,6 +1315,7 @@ def parseAlignmentData(alignmentData):
 
     final_position_pairs = position_pairs + [y for y in replacement_options if y not in position_pairs]
     colorcode = colorcode + [2 for i in range(len(final_position_pairs) - len(position_pairs))]
+    cursor.close()
     return (source_text, target_text, final_position_pairs, colorcode, replacement_options, englishword)
 
 def getEnglishWords(strongsArray):
