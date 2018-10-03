@@ -183,13 +183,13 @@ class JsonExporter:
                     va1ue1 = []
                     for i in ky.split(' '):
                         if i == '255':
-                            va1ue1.append(255)
+                            va1ue1.append(None)
                         else:
                             va1ue1.append(int(i) - 1)
                     value2 = []
                     for j in val.split(' '):
                         if j == '255':
-                            value2.append(255)
+                            value2.append(None)
                         else:
                             value2.append(int(j) - 1)
                     align_list.append([value2, va1ue1])
