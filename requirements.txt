@@ -11,6 +11,7 @@ MarkupSafe==0.23
 nltk==3.2.2
 pip==9.0.1
 # polib==1.0.8
+lml==0.0.4
 psycopg2==2.7.4
 PyJWT==1.4.2
 python-dateutil==2.6.0
