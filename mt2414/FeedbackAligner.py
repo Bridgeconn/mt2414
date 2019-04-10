@@ -12,7 +12,7 @@ from .TW_strongs_ref_lookup import TWs
 
 
 class FeedbackAligner:
-	def __init__(self,db,src,src_tablename,trg,trg_tablename,alignment_tablename):
+	def __init__(self,db,src,src_tablename,trg,trg_tablename,alignment_tablename,EngAlignedLexicon_table):
 
 		self.db = db
 		
@@ -22,6 +22,7 @@ class FeedbackAligner:
 		self.trg_table_name = trg_tablename
 
 		self.alignment_table_name = alignment_tablename
+		self.lex_table = EngAlignedLexicon_table
 		# self.FeedbackLookup_table_name = src+"_"+trg+"_FeedbackLookup"
 
 		cur.execute("SHOW TABLES LIKE '"+self.src_table_name+"'")
@@ -104,9 +105,9 @@ class FeedbackAligner:
 		trg_word_list = cur.fetchall()
 		
 		if (OT):
-			cur.execute("SELECT Position, EnglishKJV,HebrewWord, Transliteration,Pronounciation,Definition FROM Heb_UHB_Eng_KJV_Aligned_Lexicon WHERE LID=%s ORDER BY Position",(lid))
+			cur.execute("SELECT Position, EnglishKJV,HebrewWord, Transliteration,Pronounciation,Definition FROM "+self.lex_table+" WHERE LID=%s ORDER BY Position",(lid))
 		else:
-			cur.execute("SELECT Position, EnglishULB_NASB_Lex_Combined, GreekWord, Transliteration, Pronounciation, Definition FROM Grk_UGNT4_Eng_Aligned_Lexicon WHERE LID = %s ORDER BY Position",(lid))
+			cur.execute("SELECT Position, EnglishULB_NASB_Lex_Combined, GreekWord, Transliteration, Pronounciation, Definition FROM "+self.lex_table+" WHERE LID = %s ORDER BY Position",(lid))
 		eng_word_list = cur.fetchall()
 
 		count_trg = 0
@@ -207,11 +208,11 @@ class FeedbackAligner:
 if __name__ == '__main__':
 
 
-	connection =  pymysql.connect(host="localhost",    # your host, usually localhost
-	                     user="root",         # your username
-	                     password="password",  # your password
-	                     database = "AutographaMT_Staging",
-	                     charset='utf8mb4')
+	# connection =  pymysql.connect(host="localhost",    # your host, usually localhost
+	#                      user="root",         # your username
+	#                      password="password",  # your password
+	#                      database = "AutographaMT_Staging",
+	#                      charset='utf8mb4')
 
 	# connection =  pymysql.connect(host="103.196.222.37",    # your host, usually localhost
 	#                     user="bcs_vo_owner",         # your username
@@ -222,25 +223,25 @@ if __name__ == '__main__':
 	#                     charset='utf8mb4')
 
 	# digital ocean 
-	# connection =  pymysql.connect(host="159.89.167.64",    # your host, usually localhost
-	#                     user="test_user",         # your username
-	#                     password="staging&2414",  # your password
-	#                     database="AutographaMTStaging",
-	#                     # database="bcs_vachan_engine_open",
-	#                     port=3306,
-	#                     charset='utf8mb4')
+	connection =  pymysql.connect(host="159.89.167.64",    # your host, usually localhost
+	                    user="test_user",         # your username
+	                    password="staging&2414",  # your password
+	                    database="AutographaMTStaging",
+	                    # database="bcs_vachan_engine_open",
+	                    port=3306,
+	                    charset='utf8mb4')
 
 		
 
-	# obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_UGNT4_BibleWord','Hin_4_Grk_UGNT4_Alignment')
-	obj = FeedbackAligner(connection,'Hin','Hin_IRV3_OT_BibleWord','Heb','Heb_UHB_BibleWord','Hin_IRV3_Heb_UHB_Alignment')
+	obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_WH_BibleWord','Hin_4_Grk_WH_Alignment','Grk_Eng_Aligned_Lexicon')
+	# obj = FeedbackAligner(connection,'Hin','Hin_IRV3_OT_BibleWord','Heb','Heb_UHB_BibleWord','Hin_IRV3_Heb_UHB_Alignment')
 
 	start = time.clock()
 	
 	#obj.on_approve_feedback([("2424 5547","यीशु मसीह"),("5207","सन्तान"),("5257 5547","मसीह . सेवक")])
 
-	# src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(23146)
-	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(23090,OT=True)
+	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(30478)
+	# src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(23094,OT=True)
 	print("src_word_list:"+str(src_word_list))
 	print("\n")
 	print("trg_word_list:"+str(trg_word_list))

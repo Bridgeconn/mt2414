@@ -125,7 +125,7 @@ def auth():
     password_hash_new = scrypt.hash(password, password_salt).hex()
     role = rst[2]
     if password_hash == password_hash_new:
-        access_token = jwt.encode({'sub': email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1), 'role': role}, jwt_hs256_secret, algorithm='HS256')
+        access_token = jwt.encode({'sub': email, 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1), 'role': role, 'app':'mt'}, jwt_hs256_secret, algorithm='HS256')
         logging.warning('User: \'' + str(email) + '\' logged in successfully')
         return '{"access_token": "%s"}\n' % (access_token.decode('utf-8'),)
     logging.warning('User: \'' + str(email) + '\' login attempt unsuccessful: Incorrect Password')
@@ -269,18 +269,21 @@ def check_token(f):
                 decoded = jwt.decode(token, jwt_hs256_secret, options=options, algorithms=[algorithm], leeway=leeway)
                 request.email = decoded['sub']
                 request.role = decoded['role']
+                request.app = decoded['app']
+            except jwt.exceptions.DecodeError as e:
+                raise TokenError('Invalid token', str(e))
+            if request.app == 'aligner':
                 connection = connect_db()
                 cursor = connection.cursor()
                 cursor.execute("SELECT Token FROM Users WHERE Email=%s", (request.email,))
                 savedToken = cursor.fetchone()[0]
-            except jwt.exceptions.DecodeError as e:
-                raise TokenError('Invalid token', str(e))
-            if token != savedToken:
-                raise TokenError('Invalid Token', 'Non ITL Token')
+                if token != savedToken:
+                    raise TokenError('Invalid Token', 'Non ITL Token')
         else:
             raise TokenError('Invalid header', 'Token contains spaces')
         return f(*args, **kwds)
     return wrapper
+
 
 
 @app.route("/v1/keys", methods=["POST"])
@@ -1326,6 +1329,15 @@ def generatePositionalTextList(value):
         textObj["strongs"] = strongsList
     return textObj
 
+def getLexiconTable(trg, tVer):
+    connection = connect_db()
+    cursor = connection.cursor()
+    target = "%s_%s" %(trg.capitalize(), tVer.upper())
+    cursor.execute("SHOW TABLES LIKE '" + target + "_Eng_Aligned_Lexicon%'")
+    lexicon_table = cursor.fetchone()[0]
+    cursor.close()
+    return lexicon_table
+
 
 def getTableNames(srclang, trglang):
     """
@@ -1489,7 +1501,7 @@ def getalignments(bcv, srclang, trglang):
     connection = connect_db()
     
     src = srclang.split('-')[0]
-    trg = trglang.split('-')[0]
+    trg, tVer = trglang.split('-')
 
     lid = getLid(bcv)
 
@@ -1502,8 +1514,8 @@ def getalignments(bcv, srclang, trglang):
         lidList = [startLid + i for i in range(9) if (startLid + i) > 23145 and (startLid + i) < 31102]
     tablenames = getTableNames(srclang, trglang)
     alignmentTableName, src_bible_words_table, trg_bible_words_table = tablenames
-
-    fb = FeedbackAligner(connection, src, src_bible_words_table, trg, trg_bible_words_table, alignmentTableName)
+    lexicon_table = getLexiconTable(trg, tVer)
+    fb = FeedbackAligner(connection, src, src_bible_words_table, trg, trg_bible_words_table, alignmentTableName, lexicon_table)
     lexiconData = {}
     sourceObj = {}
     targetObj = {}
@@ -1825,7 +1837,7 @@ def getlanguages():
     for item in tablesList:
         src, sVer = item.split('_')[0:2]
         src = src.lower()
-        key = src + '-' + sVer
+        key = (src + '-' + sVer).lower()
         languageDict[key] = languageList[src] + " (Version: " + sVer + ")"
     return jsonify(languageDict)
 
@@ -1843,9 +1855,9 @@ def getTargetLanguagesList(srclang):
     for item in rst:
         tables_split = item[0].split("_")
         trg = tables_split[2]
-        tVer = tables_split[3]
+        tVer = tables_split[3].lower()
         trg = trg.lower()
-        key = trg + "-" + tVer
+        key = (trg + "-" + tVer).lower()
         languageDict[key] = languageList[trg] + " (Version: " + tVer +")"
     return jsonify(languageDict)
 
@@ -2173,7 +2185,8 @@ def authenticate():
                         'sub': email,
                         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1),
                         'role': rst[4],
-                        'firstName':rst[5]
+                        'firstName':rst[5],
+                        'app':'aligner'
                     },
                     jwt_hs256_secret,
                     algorithm='HS256'
