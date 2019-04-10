@@ -1439,7 +1439,6 @@ def parsePositionTupleToList(data):
     strongsList = generatePositionalTextList(strongsData)
     engData = []
     targetList = []
-
     for item in data[1]:
         targetList.append(item[3]["OriginalWord"])
         strongs = item[0]
@@ -1522,6 +1521,7 @@ def getalignments(bcv, srclang, trglang):
     positionalPairs = {}
     for l in lidList:
         res = fb.fetch_alignment(l, OT)
+        print(res)
         verseData = parsePositionTupleToList(res)
         sourceObj[l] = {
             src + "_text": verseData[0]["text"]
@@ -1702,7 +1702,8 @@ def editalignments():
     cursor.execute("SELECT ID FROM Organisations WHERE Name=%s", (organisation,))
     organisation_id = cursor.fetchone()[0]
     tablenames = getTableNames(srclang, trglang)
-    alignmentTableName, src_bible_words_table, trg_bible_words_table = tablenames    
+    alignmentTableName, src_bible_words_table, trg_bible_words_table = tablenames
+    lexicon_table = getLexiconTable(trg, tVer)
     access_check = checkUserEditAccess(bcv, srclang, trglang, userId, organisation_id)
     if access_check["success"]:
         srclid = getLid(bcv)
@@ -1726,7 +1727,7 @@ def editalignments():
                     targetWord = None
                 final_position_pairs.append(((srclid, sPos, sourceWord), (key, tPos, targetWord)))
 
-        fb = FeedbackAligner(connection, src, src_bible_words_table, trg, trg_bible_words_table, alignmentTableName)
+        fb = FeedbackAligner(connection, src, src_bible_words_table, trg, trg_bible_words_table, alignmentTableName, lexicon_table)
         fb.save_alignment_full_verse(srclid, final_position_pairs, userId, None, 1)
         connection.commit()
         cursor.close()
