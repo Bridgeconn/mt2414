@@ -91,7 +91,7 @@ class FeedbackAligner:
 
 		# print(type(lid))
 		if(OT):
-			cur.execute("SELECT EnglishKJV, Position_KJV from Heb_UHB_Eng_KJV_Aligned_Lexicon where LID =%s Order by Position",(lid))
+			cur.execute("SELECT EnglishKJV, Position_KJV from "+self.lex_table+" where LID =%s Order by Position",(lid))
 		else:
 			cur.execute("SELECT Word, Position from Eng_ULB_BibleWord where LID = %s Order by Position",(lid))
 		eng_verse_word_list = cur.fetchall()
@@ -234,7 +234,8 @@ if __name__ == '__main__':
 		
 
 	obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_WH_BibleWord','Hin_4_Grk_WH_Alignment','Grk_Eng_Aligned_Lexicon')
-	# obj = FeedbackAligner(connection,'Hin','Hin_IRV3_OT_BibleWord','Heb','Heb_UHB_BibleWord','Hin_IRV3_Heb_UHB_Alignment')
+	# obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_UGNT4_BibleWord','Hin_4_Grk_UGNT4_Alignment','Grk_UGNT4_Eng_Aligned_Lexicon')
+	# obj = FeedbackAligner(connection,'Hin','Hin_IRV3_OT_BibleWord','Heb','Heb_UHB_BibleWord','Hin_IRV3_Heb_UHB_Alignment','Heb_UHB_Eng_KJV_Aligned_Lexicon')
 
 	start = time.clock()
 	
