@@ -1703,12 +1703,12 @@ def editalignments():
     organisation_id = cursor.fetchone()[0]
     tablenames = getTableNames(srclang, trglang)
     alignmentTableName, src_bible_words_table, trg_bible_words_table = tablenames
-    lexicon_table = getLexiconTable(trg, tVer)
     access_check = checkUserEditAccess(bcv, srclang, trglang, userId, organisation_id)
     if access_check["success"]:
         srclid = getLid(bcv)
         src, sVer = srclang.split('-')
         trg, tVer = trglang.split('-')
+        lexicon_table = getLexiconTable(trg, tVer)
         cursor.execute("SELECT Position, Word FROM " + src_bible_words_table + " WHERE LID=%s", (srclid,))
         src_text_list = generatePositionalTextList(cursor.fetchall())["text"]
         final_position_pairs = []
