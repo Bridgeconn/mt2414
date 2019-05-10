@@ -1778,6 +1778,7 @@ def jsonexporter(srclang, trglang, book, usfm_status):
     je = JsonExporter(connection, source_word_table, target_word_table, bc, book, \
     alignment_table, usfm_status)
     var = je.exportAlignments()
+    var = re.sub(r'\u200B', u'\u2060', var)
     return var
 
 
