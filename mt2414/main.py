@@ -337,7 +337,7 @@ def create_sources():
 
 def tokenise(content):                                                  #--------------To generate tokens -------------------#
     remove_punct = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।0123456789cvpsSAQqCHPETIidmJNa])', '', content)
-    token_list = nltknltk.word_tokenize(remove_punct)
+    token_list = nltk.word_tokenize(remove_punct)
     token_set = set([x.encode('utf-8') for x in token_list])
     return token_set
 
@@ -635,13 +635,13 @@ def bookwiseagt(excel_status):
                     for t in tokens:
                         token_list.append(t[0])
                 token_set = set(token_list) - set(translated_tokens)
-                print(token_list)
+                # print(token_list)
                 cursor.close()
                 result = [['TOKEN', 'TRANSLATION']]
                 for i in list(token_set):
                     result.append([i])
-                print("========================")
-                print(result)
+                # print("========================")
+                # print(result)
 
                 sheet = pyexcel.Sheet(result)
                 output = flask.make_response(sheet.xlsx)
@@ -753,7 +753,7 @@ def tokenlist():
         sheet = pyexcel.Sheet(result)
         output = flask.make_response(sheet.xlsx)
         output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" % (bk)
-        print(sheet)
+        # print(sheet)
         output.headers["Content-type"] = "xlsx"
         return output
 
