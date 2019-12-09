@@ -1218,19 +1218,11 @@ def translations():
                                 untranslated.append(word)
                         else:
                             new_line_words.append(tokens.get(word, word))
-                    
-                    # print("neeeeeeeeeeeeeeeeeeeewwwww", (new_line_words))
-                    
                     out_line = ' '.join(new_line_words)
                     out_line1 = re.sub("  ", "", out_line)
                     out_text_lines.append(out_line1)
                 filtern = list(filter(None, out_text_lines))
-
-                print("filterrrrrrrrrrrrrrrrrrrrrrrr",filtern)
-
                 out_text = '\n'.join(filtern)
-                print("oooooooooooooooooooooooooooo",out_text)
-                
                 for w in hyphenated_words:
                     word = ">>>"+str(w)+"<<<"
                     replace = tokens.get(w, ">>>"+str(w)+"<<<")
@@ -1238,7 +1230,6 @@ def translations():
                 out_final = re.sub(r'>>>(\d+)-(\d+)<<<', r'\1-\2', out_text)
                 out_final = re.sub(r'>>>(\d+)—(\d+)<<<', r'\1—\2', out_final)
                 out_final = re.sub(r'\[ ', r' [', out_final)
-                
                 out_final = re.sub(r'\( ', r' (', out_final)
                 out_final = re.sub('  ', '', out_final)
                 out_final = re.sub("``", '"', out_final)
@@ -1247,12 +1238,10 @@ def translations():
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
                 out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
-                
                 tr["untranslated"] = "\n".join(list(set(untranslated)))
                 tr[book_name] = out_final
             else:
                 changes1.append(book)
-        print("trrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",tr)
         cursor.close()
         connection.commit()
         if changes:
