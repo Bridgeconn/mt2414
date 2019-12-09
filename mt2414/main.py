@@ -57,7 +57,7 @@ mysql_user = os.environ.get("MTV2_USER", "mysql")
 mysql_password = os.environ.get("MTV2_PASSWORD", "secret")
 mysql_database = os.environ.get("MTV2_DATABASE", "postgres")
 
-
+print("hi")
 def connect_db():
     """
     Opens a connection with MySQL Database
@@ -71,7 +71,8 @@ def get_db():                                                                   
     current application context.
     """
     if not hasattr(g, 'db'):
-        g.db = psycopg2.connect(dbname=mt2414, user=mt, password=mt2414, host=postgres_host, port=postgres_port)
+        g.db = psycopg2.connect(dbname="mt2414", user="mt", password="mt2414", host=postgres_host, port=postgres_port)
+    print(g.db)
     return g.db
 
 def getBibleBookIds():
@@ -336,7 +337,7 @@ def create_sources():
 
 def tokenise(content):                                                  #--------------To generate tokens -------------------#
     remove_punct = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।0123456789cvpsSAQqCHPETIidmJNa])', '', content)
-    token_list = nltk.word_tokenize(remove_punct)
+    token_list = nltknltk.word_tokenize(remove_punct)
     token_set = set([x.encode('utf-8') for x in token_list])
     return token_set
 
@@ -634,10 +635,14 @@ def bookwiseagt(excel_status):
                     for t in tokens:
                         token_list.append(t[0])
                 token_set = set(token_list) - set(translated_tokens)
+                print(token_list)
                 cursor.close()
                 result = [['TOKEN', 'TRANSLATION']]
                 for i in list(token_set):
                     result.append([i])
+                print("========================")
+                print(result)
+
                 sheet = pyexcel.Sheet(result)
                 output = flask.make_response(sheet.xlsx)
                 output.headers["Content-Disposition"] = "attachment; filename = %s.xlsx" % (bkn)
@@ -744,9 +749,11 @@ def tokenlist():
         result = [['TOKEN', 'TRANSLATION']]
         for i in list(output):
             result.append([i])
+        # pyexcel.save_as(array=result, dest_file_name="example.xls")
         sheet = pyexcel.Sheet(result)
         output = flask.make_response(sheet.xlsx)
         output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" % (bk)
+        print(sheet)
         output.headers["Content-type"] = "xlsx"
         return output
 
@@ -1179,13 +1186,13 @@ def translations():
             source_content = cursor.fetchone()
             if source_content:
                 out_text_lines = []
-                book_name = (re.search('(?<=\id )\w+', source_content[0])).group(0)
+                book_name = (re.search(r'(?<=\\id )\w+', source_content[0])).group(0)
                 changes.append(book_name)
                 hyphenated_words = re.findall(r'\w+-\w+', source_content[0])
                 content = re.sub(r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
                 single_quote_count = 0
                 double_quotes_count = 0
-                for line in content.split("\n"):
+                for line in content.split('\n'):
                     line_words = nltk.word_tokenize(line)
                     new_line_words = []
                     for word in line_words:
@@ -1211,10 +1218,19 @@ def translations():
                                 untranslated.append(word)
                         else:
                             new_line_words.append(tokens.get(word, word))
-                    out_line = " ".join(new_line_words)
-                    out_line = re.sub("  ", "", out_line)
-                    out_text_lines.append(out_line)
-                out_text = "\n".join(out_text_lines)
+                    
+                    # print("neeeeeeeeeeeeeeeeeeeewwwww", (new_line_words))
+                    
+                    out_line = ' '.join(new_line_words)
+                    out_line1 = re.sub("  ", "", out_line)
+                    out_text_lines.append(out_line1)
+                filtern = list(filter(None, out_text_lines))
+
+                print("filterrrrrrrrrrrrrrrrrrrrrrrr",filtern)
+
+                out_text = '\n'.join(filtern)
+                print("oooooooooooooooooooooooooooo",out_text)
+                
                 for w in hyphenated_words:
                     word = ">>>"+str(w)+"<<<"
                     replace = tokens.get(w, ">>>"+str(w)+"<<<")
@@ -1222,18 +1238,21 @@ def translations():
                 out_final = re.sub(r'>>>(\d+)-(\d+)<<<', r'\1-\2', out_text)
                 out_final = re.sub(r'>>>(\d+)—(\d+)<<<', r'\1—\2', out_final)
                 out_final = re.sub(r'\[ ', r' [', out_final)
+                
                 out_final = re.sub(r'\( ', r' (', out_final)
                 out_final = re.sub('  ', '', out_final)
                 out_final = re.sub("``", '"', out_final)
                 out_final = re.sub(r"(\\v) (\d+)(')", r'\1 \2 \3', out_final)
-                out_final = re.sub(r'(\\v) (\d+)(")', r'\1 \2 \3', out_final)
+                out_final = re.sub('(\\v) (\d+)(")', r'\1 \2 \3', out_final)
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
-                out_final = re.sub('(\\\\id .*)', '\\id ' + str(book_name), out_final)
+                out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
+                
                 tr["untranslated"] = "\n".join(list(set(untranslated)))
                 tr[book_name] = out_final
             else:
                 changes1.append(book)
+        print("trrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",tr)
         cursor.close()
         connection.commit()
         if changes:
