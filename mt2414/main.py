@@ -43,12 +43,16 @@ app = Flask(__name__)
 CORS(app)
 
 sendinblue_key = os.environ.get("MT2414_SENDINBLUE_KEY")
-jwt_hs256_secret = "x709myFlW5"
-postgres_host = os.environ.get("MT2414_POSTGRES_HOST", "localhost")
-postgres_port = os.environ.get("MT2414_POSTGRES_PORT", "5432")
-postgres_user = os.environ.get("MT2414_POSTGRES_USER", "postgres")
-postgres_password = os.environ.get("MT2414_POSTGRES_PASSWORD", "secret")
-postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE", "postgres")
+jwt_hs256_secret = os.environ.get("MT2414_HS256_SECRET")
+postgres_host = os.environ.get("MT2414_POSTGRES_HOST")
+postgres_port = os.environ.get("MT2414_POSTGRES_PORT")
+postgres_user = os.environ.get("MT2414_POSTGRES_USER")
+postgres_password = os.environ.get("MT2414_POSTGRES_PASSWORD")
+postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE")
+
+print("details", sendinblue_key, jwt_hs256_secret, postgres_host, postgres_port, postgres_user, postgres_password, postgres_database)
+
+
 host_api_url = os.environ.get("MT2414_HOST_API_URL")
 host_ui_url = os.environ.get("MT2414_HOST_UI_URL")
 mysql_host = os.environ.get("MTV2_HOST", "localhost")
@@ -57,7 +61,9 @@ mysql_user = os.environ.get("MTV2_USER", "mysql")
 mysql_password = os.environ.get("MTV2_PASSWORD", "secret")
 mysql_database = os.environ.get("MTV2_DATABASE", "postgres")
 
-print("hi")
+
+print("Welcome")
+
 def connect_db():
     """
     Opens a connection with MySQL Database
@@ -71,7 +77,7 @@ def get_db():                                                                   
     current application context.
     """
     if not hasattr(g, 'db'):
-        g.db = psycopg2.connect(dbname="mt2414", user="mt", password="mt2414", host=postgres_host, port=postgres_port)
+        g.db = psycopg2.connect(dbname=postgres_database, user=postgres_user, password=postgres_password, host=postgres_host, port=postgres_port)
     print(g.db)
     return g.db
 
