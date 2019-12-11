@@ -18,6 +18,6 @@ setup(
         "pyexcel",
         "pyotp",
         "pyexcel-xlsx",
-        
+        "xlrd"
         ],
 )
