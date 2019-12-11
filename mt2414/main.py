@@ -78,7 +78,6 @@ def get_db():                                                                   
     """
     if not hasattr(g, 'db'):
         g.db = psycopg2.connect(dbname=postgres_database, user=postgres_user, password=postgres_password, host=postgres_host, port=postgres_port)
-    print(g.db)
     return g.db
 
 def getBibleBookIds():
@@ -456,7 +455,6 @@ def updatelanguagelist():
         data = json.loads(url.read().decode())
         tr = {}
         for item in data:
-            # if "IN" in item["cc"]:
             tr[item["ang"]] = item["lc"]
         db_item = pickle.dumps(tr)
         connection = get_db()
@@ -641,14 +639,10 @@ def bookwiseagt(excel_status):
                     for t in tokens:
                         token_list.append(t[0])
                 token_set = set(token_list) - set(translated_tokens)
-                # print(token_list)
                 cursor.close()
                 result = [['TOKEN', 'TRANSLATION']]
                 for i in list(token_set):
                     result.append([i])
-                # print("========================")
-                # print(result)
-
                 sheet = pyexcel.Sheet(result)
                 output = flask.make_response(sheet.xlsx)
                 output.headers["Content-Disposition"] = "attachment; filename = %s.xlsx" % (bkn)
@@ -720,6 +714,7 @@ def autotokens():
         cursor.close()
         return json.dumps(tr)
 
+
 @app.route("/v1/tokenlist", methods=["POST", "GET"])               #------------------To download remaining tokenwords in an Excel file (bookwise)---------------#
 @check_token
 def tokenlist():
@@ -755,11 +750,10 @@ def tokenlist():
         result = [['TOKEN', 'TRANSLATION']]
         for i in list(output):
             result.append([i])
-        # pyexcel.save_as(array=result, dest_file_name="example.xls")
         sheet = pyexcel.Sheet(result)
+        # pyexcel.save_as(array=result, dest_file_name="example.xls")
         output = flask.make_response(sheet.xlsx)
-        output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" % (bk)
-        # print(sheet)
+        output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" %(bk)
         output.headers["Content-type"] = "xlsx"
         return output
 
