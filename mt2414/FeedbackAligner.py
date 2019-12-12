@@ -4,49 +4,46 @@
 
 import re, sys, pickle
 import os.path 
+import itertools
+import time, json
 import pymysql
+
+from .TW_strongs_ref_lookup import TWs
 
 
 class FeedbackAligner:
-	def __init__(self,db,src,trg, tablename):
+	def __init__(self,db,src,src_tablename,trg,trg_tablename,alignment_tablename,EngAlignedLexicon_table):
 
 		self.db = db
 		
 		cur = self.db.cursor()
 		
-		self.src_table_name = src+"_bible_concordance"
-		self.trg_table_name = trg+"_bible_concordance"
+		self.src_table_name = src_tablename
+		self.trg_table_name = trg_tablename
 
-		# self.alignment_table_name = src+"_"+trg+"_sw_stm_ne_giza_tw__alignment"
-		self.alignment_table_name = tablename
-		self.FeedbackLookup_table_name = src+"_"+trg+"_FeedbackLookup"
+		self.alignment_table_name = alignment_tablename
+		self.lex_table = EngAlignedLexicon_table
+		# self.FeedbackLookup_table_name = src+"_"+trg+"_FeedbackLookup"
 
 		cur.execute("SHOW TABLES LIKE '"+self.src_table_name+"'")
 		if cur.rowcount==0:
 			print("Table not found: "+self.src_table_name)
-			sys.exit(0)
+			sys.exit(1)
 
 
 		cur.execute("SHOW TABLES LIKE '"+self.trg_table_name+"'")
 		if cur.rowcount==0:
 			print("Table not found: "+self.trg_table_name)
-			sys.exit(0)
+			sys.exit(1)
 			
 		cur.execute("SHOW TABLES LIKE '"+self.alignment_table_name+"'")
 		if cur.rowcount==0:
 			print("Table not found: "+self.alignment_table_name)
-			sys.exit(0)
+			sys.exit(1)
 
 
-		cur.execute("SHOW TABLES LIKE '"+self.FeedbackLookup_table_name+"'")
-		if cur.rowcount==0:
-			cur.execute("CREATE TABLE "+self.FeedbackLookup_table_name+
-				" (source_word VARCHAR(50) CHARACTER SET utf8mb4 NOT NULL,target_word VARCHAR(50) CHARACTER SET utf8mb4 NOT NULL,confidence_score FLOAT(6,5))")
-			cur.execute("ALTER TABLE "+self.FeedbackLookup_table_name+" ADD UNIQUE INDEX source_word_index(source_word)")
-			cur.execute("ALTER TABLE "+self.FeedbackLookup_table_name+" ADD INDEX target_word_index(target_word)")
-			self.db.commit()
 		
-	# def __del__(self):
+	def __del__(self):
 		
 		self.db.commit()
 		# self.db.close()
@@ -54,66 +51,19 @@ class FeedbackAligner:
 
 
 	def insert_into_lookup_table(self,src_word,trg_word):
-		try:	
-			cur = self.db.cursor()
+		# decide on how to represent feedback info using type and stage
+		# and implement this
+		return
 
 
-			# for calculating confidence_score
-			cur.execute("select count(distinct left(occurences,5)) from "+self.src_table_name+" where word='"+src_word+"'") 
-			if cur.rowcount>0:
-				total_verses_src_word_occured = cur.fetchone()[0]
-				print(total_verses_src_word_occured)
-			else:
-				total_verses_src_word_occured = 1
-
-			query = " select count(distinct left("+ self.trg_table_name +".occurences,5)) from "+ self.trg_table_name +" INNER JOIN "+ self.src_table_name +" on left("+self.trg_table_name+".occurences,5)=left("+self.src_table_name+".occurences,5) where "+self.src_table_name+".word=\'"+src_word+"\' and "+self.trg_table_name+".word=\'"+trg_word+"\'"
-			print(query)
-			cur.execute(query)
-			if cur.rowcount>0:
-				total_verses_trg_word_cooccured = cur.fetchone()[0]
-				print(total_verses_trg_word_cooccured)
-			else:
-				total_verses_trg_word_cooccured = 0
-
-
-			cur.execute("	select count(distinct b.lid) from "+self.src_table_name+" a, "+self.alignment_table_name+" b, "+self.trg_table_name+" c where a.occurences=b.source_wordID and c.occurences=b.target_wordID and a.word='"+src_word+"' and c.word='"+trg_word+"'")
-			if cur.rowcount>0:
-				total_verses_src_trg_aligned = cur.fetchone()[0]
-				print(total_verses_src_trg_aligned)
-			else:
-				total_verses_src_trg_aligned = 1
-
-
-			cur.execute("	select count(distinct b.lid) from "+self.src_table_name+" a, "+self.alignment_table_name+" b, "+self.trg_table_name+" c where a.occurences=b.source_wordID and c.occurences=b.target_wordID and a.word='"+src_word+"' and c.word!='"+trg_word+"'")
-			if cur.rowcount>0:
-				total_verses_src_trg_NOTaligned = cur.fetchone()[0]
-				print(total_verses_src_trg_NOTaligned)
-			else:
-				total_verses_src_trg_NOTaligned = 0
-
-			co_occurence_confidence = total_verses_trg_word_cooccured/total_verses_src_word_occured
-			aligned_confidence = (total_verses_src_trg_aligned-total_verses_src_trg_NOTaligned) /total_verses_src_trg_aligned
-
-
-			confidence_score = 0.75*co_occurence_confidence + 0.25*aligned_confidence
-	
-
-			cur.execute("INSERT INTO "+self.FeedbackLookup_table_name+" (source_word,target_word,confidence_score) VALUES (%s,%s,%s)",
-				(src_word,trg_word,confidence_score))
-			self.db.commit()
-			
-		except Exception as e:
-			print("Warning: word pair not inserted to look up table")
-			print(e)
-
-
-
-	def save_alignment(self,lid,word_pairs,user):
+	def save_alignment_full_verse(self,lid,word_pairs,userId,Type,Stage):
 		cur = self.db.cursor()
-
+		
+		cur.execute("DELETE FROM "+self.alignment_table_name+" WHERE LidSrc = %s", lid)
 		for pair in word_pairs:
-			cur.execute("INSERT INTO "+self.alignment_table_name+" (lid,source_wordID,target_wordID,user) VALUES (%s,%s,%s,'default')",
-				(lid, pair[0],pair[1]))
+		
+			cur.execute("INSERT INTO "+self.alignment_table_name+" (LidSrc, LidTrg, PositionSrc, PositionTrg, WordSrc,Strongs, UserId,Type, Stage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s,%s)",
+				(pair[0][0], pair[1][0], pair[0][1], pair[1][1],pair[0][2], pair[1][2],userId,Type,Stage))
 
 		self.db.commit()
 
@@ -121,153 +71,204 @@ class FeedbackAligner:
 	
 
 
-	def update_alignment_on_verse(self,lid_to_update):
-		cur = self.db.cursor()
-
-		# get source_word list and target list for the verse from concordance table
-		cur.execute("SELECT word,occurences FROM "+self.src_table_name+" WHERE occurences LIKE '"+lid_to_update+"\_%'")
-		src_word_list = []
-		for row in cur.fetchall():
-			src_word_list.append((row[0],row[1]))
-		cur.execute("SELECT word,occurences FROM "+self.trg_table_name+" WHERE occurences LIKE '"+lid_to_update+"\_%'")
-		trg_word_list = []
-		for row in cur.fetchall():
-			trg_word_list.append((row[0],row[1]))
-
-		# for all source_words get _FeedbackLookup entry
-		# and if entry present in trg_verse, add them to replacement_options
-		replacement_options=[]
-		mapped = []
-		for s_wrd in src_word_list:
-			cur.execute("SELECT target_word FROM "+self.FeedbackLookup_table_name+" WHERE source_word='"+s_wrd[0]+"' ORDER BY confidence_score DESC")
-			for row in cur.fetchall():
-				mapped_trg_word = row[0]
-				flag = False
-				for t_wrd in trg_word_list:
-					if t_wrd[0]==mapped_trg_word and t_wrd[1] not in mapped:
-						replacement_options.append((s_wrd[1],t_wrd[1]))
-						mapped.append(t_wrd[1])
-						flag=True 
-						break
-				if flag==True:
-					break
-		print(replacement_options)
-
-
-
-		#update the alignment table
-		for pair in replacement_options:
-			cur.execute("DELETE FROM "+self.alignment_table_name+"  WHERE source_wordID='"+pair[0]+"'")
-
-			cur.execute("DELETE FROM "+self.alignment_table_name+"  WHERE target_wordID='"+pair[1]+"'")
-
-		for pair in replacement_options:
-
-			cur.execute("INSERT INTO "+self.alignment_table_name+" (lid,source_wordID,target_wordID,corrected) VALUES (%s,%s,%s,0)",
-				(lid_to_update, pair[0],pair[1]))
-
-		self.db.commit()
-
 			
+	def get_suggested_feedback_alignment_on_verse(self,lid_to_update):
+		# decide on how to represent feedback info using type and stage
+		# and implement this
+		
 
-		# for word 
+		return replacement_options
+		
+
+
+		
 
 
 
 
-	def fetch_alignment(self,lid,auto_alignmenttable):
+	def fetch_alignment(self,lid,OT=False):
 		cur = self.db.cursor()
 
-		# get source_word list and target list for the verse from concordance table
-		cur.execute("SELECT word,occurences FROM "+self.src_table_name+" WHERE occurences LIKE '"+lid+"\_%'")
-		src_word_list = []
-		for row in cur.fetchall():
-			src_word_list.append((row[0],row[1]))
-		# print("src_word_list")
-		# print(src_word_list)
+		# print(type(lid))
+		if(OT):
+			cur.execute("SELECT EnglishKJV, Position_KJV from "+self.lex_table+" where LID =%s Order by Position",(lid))
+		else:
+			cur.execute("SELECT Word, Position from Eng_ULB_BibleWord where LID = %s Order by Position",(lid))
+		eng_verse_word_list = cur.fetchall()
+
+		cur.execute("SELECT Word, Position FROM "+self.src_table_name+" WHERE LID = %s ORDER BY Position ",(lid))
+		src_word_list = cur.fetchall()
 
 
-		cur.execute("SELECT word,occurences FROM "+self.trg_table_name+" WHERE occurences LIKE '"+lid+"\_%'")
-		trg_word_list = []
-		for row in cur.fetchall():
-			trg_word_list.append((row[0],row[1]))
-		# print("trg_word_list")
-		# print(trg_word_list)
+		
+		cur.execute("SELECT Strongs, Position, Word FROM "+self.trg_table_name+" WHERE LID = %s ORDER BY Position ",(lid))
+		trg_word_list = cur.fetchall()
+		
+		if (OT):
+			cur.execute("SELECT Position, EnglishKJV,HebrewWord, Transliteration,Pronounciation,Definition FROM "+self.lex_table+" WHERE LID=%s ORDER BY Position",(lid))
+		else:
+			cur.execute("SELECT Position, EnglishULB_NASB_Lex_Combined, GreekWord, Transliteration, Pronounciation, Definition FROM "+self.lex_table+" WHERE LID = %s ORDER BY Position",(lid))
+		eng_word_list = cur.fetchall()
 
+		count_trg = 0
+		count_eng = 0
+		trg_word_list_appended = []
+		while count_trg<len(trg_word_list) and count_eng<len(eng_word_list):
+			if(trg_word_list[count_trg][1] == eng_word_list[count_eng][0]):
+				lexical_info = {}
+				lexical_info["English"] = eng_word_list[count_eng][1]
+				lexical_info["OriginalWord"] = eng_word_list[count_eng][2]
+				lexical_info["Transliteration"] = eng_word_list[count_eng][3]
+				lexical_info["Pronounciation"] = eng_word_list[count_eng][4]
+				lexical_info["Definition"] = eng_word_list[count_eng][5]
+				trg_word_list_appended.append((trg_word_list[count_trg][0],trg_word_list[count_trg][1],trg_word_list[count_trg][2],lexical_info))
+				count_trg += 1
+				count_eng += 1
+			elif eng_word_list[count_eng][0] == None:
+				count_eng +=1
+			elif (trg_word_list[count_trg][1] < eng_word_list[count_eng][0]):
+				lexical_info = {}
+				trg_word_list_appended.append((trg_word_list[count_trg][0],trg_word_list[count_trg][1],trg_word_list[count_trg][2],lexical_info))
+				count_trg += 1
+			else:
+				count_eng +=1	
+		if(count_trg<len(trg_word_list)):
+			while (count_trg<len(trg_word_list)):
+				lexical_info = {}
+				trg_word_list_appended.append((trg_word_list[count_trg][0],trg_word_list[count_trg][1],trg_word_list[count_trg][2],lexical_info))
+				count_trg += 1
+		trg_word_list = trg_word_list_appended
 
-		# get the alignments from specified table
-		cur.execute("SELECT * from "+auto_alignmenttable+" WHERE lid='"+lid+"'")
-		auto_alignments = cur.fetchall()
-		# print("auto_alignments")
-		# print(auto_alignments)
+		cur.execute("SELECT LidSrc, LidTrg, PositionSrc, PositionTrg, WordSrc, Strongs, UserID, Type, Stage from "+self.alignment_table_name+" WHERE LidSrc=%s",(lid))
+		fetched_alignments = cur.fetchall()
+		
+		# # for all source_words get _FeedbackLookup entry
+		# # and if entry present in trg_verse, add them to replacement_options
+		# replacement_options=self.get_suggested_feedback_alignment_on_verse(lid)
 
-		# get the alignments from master table, if present
-		cur.execute("SELECT * from "+self.alignment_table_name+" WHERE lid='"+lid+"'")
-		corrected_alignments = cur.fetchall()
-		# print("corrected_alignments")
-		# print(corrected_alignments)
-
-		# for all source_words get _FeedbackLookup entry
-		# and if entry present in trg_verse, add them to replacement_options
-		replacement_options=[]
-		mapped = []
-		for s_wrd in src_word_list:
-			cur.execute("SELECT target_word FROM "+self.FeedbackLookup_table_name+" WHERE source_word='"+s_wrd[0]+"' ORDER BY confidence_score DESC")
-			for row in cur.fetchall():
-				mapped_trg_word = row[0]
-				flag = False
-				for t_wrd in trg_word_list:
-					if t_wrd[0]==mapped_trg_word and t_wrd[1] not in mapped:
-						replacement_options.append((s_wrd[1],t_wrd[1]))
-						mapped.append(t_wrd[1])
-						flag=True 
-						break
-				if flag==True:
-					break
-		# print("replacement_options")
-		# print(replacement_options)
-
-		return src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options
+		auto_alignments = [ ((row[0],row[2],row[4]),(row[1],row[3],row[5])) for row in fetched_alignments if row[8]==0]
+		corrected_alignments = [ ((row[0],row[2],row[4]),(row[1],row[3],row[5])) for row in fetched_alignments if row[8]!=0]
+		replacement_options = []
+		
+		return list(src_word_list), list(trg_word_list), auto_alignments, corrected_alignments, replacement_options, list(eng_verse_word_list)
 	
 
 
 	def on_approve_feedback(self,corrected_src_trg_word_list):
-		for src_trg in corrected_src_trg_word_list:
-			src_word_to_update=src_trg[0]
-			trg_word_to_update=src_trg[1]
+		# decide on how to represent feedback info using type and stage
+		# and implement this
+		return
 
-			self.insert_into_lookup_table(src_word_to_update,trg_word_to_update)
 
-			# self.update_all_alignment_by_word(src_word_to_update)
+	def fetch_aligned_TWs(self,tw_index,strong_list,refs_list,cur):
+		
+		return_list = {}
+		# required format of return_list
+		# {
+  #       "48004005": {
+  #           "words": "('5206', 'मिले।')",
+  #           "positions": ["('8', '16')"]
+  #       }
+
+		return return_list
+
+
+
+
+	def fetch_all_TW_alignments(self):
+		cur = self.db.cursor()
+
+		return_dict_of_aligned_words = {}
+		for tw in TWs:
+			strong_list = TWs[tw]["strongs"]
+			refs_list = TWs[tw]["References"]
+			return_list = self.fetch_aligned_TWs(tw,strong_list,refs_list,cur)
+			return_dict_of_aligned_words[str(tw)] = return_list
+
+		cur.close()
+		return json.dumps(return_dict_of_aligned_words,  ensure_ascii=False)
+
+	def fetch_seleted_TW_alignments(self,tw_index_list):
+		cur = self.db.cursor()
+
+		return_dict_of_aligned_words = {}
+		for tw in tw_index_list:
+			strong_list = TWs[tw]["strongs"]
+			refs_list = TWs[tw]["References"]
+			return_list = self.fetch_aligned_TWs(tw,strong_list,refs_list,cur)
+			return_dict_of_aligned_words[str(tw)] = return_list
+
+		cur.close()
+		return json.dumps(return_dict_of_aligned_words,  ensure_ascii=False)
+
+
 
 
 
 if __name__ == '__main__':
-	if len(sys.argv)==3:
-		src = sys.argv[1]
-		trg = sys.argv[2]
-
-	else:
-		print("Usage: python3 FeedbackAligner.py src trg\n(src,trg - 3 letter lang codes\n")
-		sys.exit(0)
 
 
-	connection =  pymysql.connect(host="localhost",    # your host, usually localhost
-	                     user="root",         # your username
-	                     password="password",  # your password
-	                     database="itl_db",
-	                     charset='utf8mb4')
+	# connection =  pymysql.connect(host="localhost",    # your host, usually localhost
+	#                      user="root",         # your username
+	#                      password="password",  # your password
+	#                      database = "AutographaMT_Staging",
+	#                      charset='utf8mb4')
+
+	# connection =  pymysql.connect(host="103.196.222.37",    # your host, usually localhost
+	#                     user="bcs_vo_owner",         # your username
+	#                     password="bcs@0pen",  # your password
+	#                     database="bcs_vachan_engine_test",
+	#                     # database="bcs_vachan_engine_open",
+	#                     port=13306,
+	#                     charset='utf8mb4')
+
+	# digital ocean 
+	connection =  pymysql.connect(host="159.89.167.64",    # your host, usually localhost
+	                    user="test_user",         # your username
+	                    password="staging&2414",  # your password
+	                    database="AutographaMTStaging",
+	                    # database="bcs_vachan_engine_open",
+	                    port=3306,
+	                    charset='utf8mb4')
+
 		
 
+	obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_WH_BibleWord','Hin_4_Grk_WH_Alignment','Grk_Eng_Aligned_Lexicon')
+	# obj = FeedbackAligner(connection,'Hin','Hin_4_BibleWord','Grk','Grk_UGNT4_BibleWord','Hin_4_Grk_UGNT4_Alignment','Grk_UGNT4_Eng_Aligned_Lexicon')
+	# obj = FeedbackAligner(connection,'Hin','Hin_IRV3_OT_BibleWord','Heb','Heb_UHB_BibleWord','Hin_IRV3_Heb_UHB_Alignment','Heb_UHB_Eng_KJV_Aligned_Lexicon')
+
+	start = time.clock()
 	
-	obj = FeedbackAligner(connection, src,trg)
+	#obj.on_approve_feedback([("2424 5547","यीशु मसीह"),("5207","सन्तान"),("5257 5547","मसीह . सेवक")])
+
+	src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(30478)
+	# src_word_list, trg_word_list, auto_alignments, corrected_alignments, replacement_options, eng_word_list = obj.fetch_alignment(23094,OT=True)
+	print("src_word_list:"+str(src_word_list))
+	print("\n")
+	print("trg_word_list:"+str(trg_word_list))
+	print("\n")
+	print("auto_alignments:"+str(auto_alignments))
+	print("\n")
+	print("corrected_alignments:"+str(corrected_alignments))
+	print("\n")
+	print("replacement_options:"+str(replacement_options))
+	print("\n")
+	print("english_word_list:"+str(eng_word_list))
 
 
-	obj.on_approve_feedback([("G24240","यीशु"),("G52070","सन्तान")])
 
-	obj.fetch_alignment('23146','grk_hin_sw_stm_ne_giza_tw__alignment')
 
-	# obj.update_al
+	# obj.update_alignment_on_verse('23146')
 	
+	# obj.save_alignment_full_verse(23146,[((23146,1,"आम"),(23146,3,300)),((23146,2,"आतमि"),(23146,1,100)),((23146,3,'हात'),(23146,2,200))],9999,99,99)
 
+	# TW_alignments = obj.fetch_all_TW_alignments()
+	# TW_alignments = obj.fetch_seleted_TW_alignments([1,2,3])
+	#TW_alignments = obj.fetch_seleted_TW_alignments(range(17,22))
+
+	# TW_alignments = obj.fetch_seleted_TW_alignments([18])
+
+	# print(TW_alignments)
+
+	print("Time taken:"+str(time.clock()-start))
 	del obj
