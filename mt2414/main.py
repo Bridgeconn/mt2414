@@ -51,8 +51,8 @@ postgres_user = os.environ.get("MT2414_POSTGRES_USER")
 postgres_password = os.environ.get("MT2414_POSTGRES_PASSWORD")
 postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE")
 
-print("details", sendinblue_key, jwt_hs256_secret, postgres_host, postgres_port, postgres_user, postgres_password, postgres_database)
-
+print("PSQL_Details", sendinblue_key, jwt_hs256_secret, postgres_host,
+      postgres_port, postgres_user, postgres_password, postgres_database)
 
 host_api_url = os.environ.get("MT2414_HOST_API_URL")
 host_ui_url = os.environ.get("MT2414_HOST_UI_URL")
@@ -62,12 +62,10 @@ mysql_user = os.environ.get("MTV2_USER", "mysql")
 mysql_password = os.environ.get("MTV2_PASSWORD", "secret")
 mysql_database = os.environ.get("MTV2_DATABASE", "postgres")
 
-print(mysql_user)
-print(postgres_password)
-print(postgres_port)
-
-
+print("MYSQL_Details", host_api_url, host_ui_url, mysql_host,
+      mysql_port, mysql_user, mysql_password, mysql_database)
 print("Welcome")
+
 
 def connect_db():
     """
@@ -78,14 +76,16 @@ def connect_db():
                                password="Matthew24:14", port=postgres_port, charset='utf8mb4')
     return g.db
 
+# --------------To open database connection-------------------#
 
-def get_db():  # --------------To open database connection-------------------#
+
+def get_db():
     """Opens a new database connection if there is none yet for the
     current application context.
     """
     if not hasattr(g, 'db'):
-        g.db = psycopg2.connect(dbname="mt2414", user="amt",
-                                password="Matthew24:14", host=postgres_host, port=postgres_port)
+        g.db = psycopg2.connect(dbname=postgres_database, user=postgres_user,
+                                password=postgres_password, host=postgres_host, port=postgres_port)
     return g.db
 
 
@@ -107,7 +107,8 @@ def getBibleBookIds():
     return (bookcode, bookname)
 
 
-@app.teardown_appcontext  # -----------------Close database connection----------------#
+# -----------------Close database connection----------------#
+@app.teardown_appcontext
 def close_db(error):
     """Closes the database again at the end of the request."""
     if hasattr(g, 'db'):
@@ -149,14 +150,10 @@ def auth():
 @app.route("/v1/registrations", methods=["POST"])
 def new_registration():
     email = request.form['email']
-    print(email)
-    # if email:
-    #     return '{"success":false, "message":"Email Already Exists"}'
     password = request.form['password']
     headers = {"api-key": sendinblue_key}
     url = "https://api.sendinblue.com/v2.0/email"
     verification_code = str(uuid.uuid4()).replace("-", "")
-    # print (verification_code)
     body = '''Hi,<br/><br/>Thanks for your interest to use the AutographaMT web service. <br/>
     You need to confirm your email by opening this link:
 
@@ -170,13 +167,11 @@ def new_registration():
         "html": body,
     }
     connection = get_db()
-    # print (connection)
     password_salt = str(uuid.uuid4()).replace("-", "")
     password_hash = scrypt.hash(password, password_salt)
     cursor = connection.cursor()
     cursor.execute("SELECT email FROM users WHERE email = %s", (email,))
     rst = cursor.fetchone()
-    # print (rst)
     if not rst:
         cursor.execute("INSERT INTO users (email, verification_code, password_hash, password_salt, created_at) VALUES (%s, %s, %s, %s, current_timestamp)",
                        (email, verification_code, password_hash, password_salt))
@@ -578,21 +573,21 @@ def available_books():
         return json.dumps(book_list)
 
 
-@app.route("/v1/languages/<contentId>", methods=["GET"])
-def getLanguages(contentId):
+@app.route("/v1/language", methods=["POST"])
+@check_token
+def language():
     connection = get_db()
     cursor = connection.cursor()
-    cursor.execute("select distinct l.language_name, l.language_code, l.language_id from sources s \
-        left join languages l on s.language_id=l.language_id where s.content_id=%s", (contentId,))
-    rst = cursor.fetchall()
-    if not rst:
-        return '{"success":false, "message":"No languages available for this content"}'
-    languages = [{
-        "languageName": languageName,
-        "languageCode": languageCode,
-        "languageId": languageId
-    } for languageName, languageCode, languageId in rst]
-    return json.dumps(languages)
+    cursor.execute("SELECT language FROM sources")
+    language = cursor.fetchall()
+    language_list = set()
+    if not language:
+        return '{"success":false, "message":"No Languages"}'
+    else:
+        for rst in language:
+            language_list.add(rst[0])
+        cursor.close()
+        return json.dumps(list(language_list))
 
 
 # -------------------------To find available target_language list----------------------#
@@ -862,7 +857,8 @@ def tokenlist():
         sheet = pyexcel.Sheet(result)
         # pyexcel.save_as(array=result, dest_file_name="example.xls")
         output = flask.make_response(sheet.xlsx)
-        output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" %(bk)
+        output.headers["Content-Disposition"] = "attachment; filename=%s.xlsx" % (
+            bk)
         output.headers["Content-type"] = "xlsx"
         return output
 
@@ -1362,10 +1358,12 @@ def translations():
             source_content = cursor.fetchone()
             if source_content:
                 out_text_lines = []
-                book_name = (re.search(r'(?<=\\id )\w+', source_content[0])).group(0)
+                book_name = (re.search(r'(?<=\\id )\w+',
+                                       source_content[0])).group(0)
                 changes.append(book_name)
                 hyphenated_words = re.findall(r'\w+-\w+', source_content[0])
-                content = re.sub(r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
+                content = re.sub(
+                    r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
                 single_quote_count = 0
                 double_quotes_count = 0
                 for line in content.split('\n'):
@@ -1414,7 +1412,8 @@ def translations():
                 out_final = re.sub(r"(\\v) (\d+)(')", r'\1 \2 \3', out_final)
                 out_final = re.sub('(\\v) (\d+)(")', r'\1 \2 \3', out_final)
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
-                out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
+                out_final = re.sub(r'(\\id .*)', r'\\id ' +
+                                   str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
                 tr["untranslated"] = "\n".join(list(set(untranslated)))
                 tr[book_name] = out_final
