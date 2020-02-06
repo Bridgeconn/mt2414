@@ -15,7 +15,7 @@ psycopg2==2.7.4
 PyJWT==1.4.2
 python-dateutil==2.6.0
 pytz==2016.10
-requests==2.12.4
+requests==2.20.0
 scrypt==0.8.0
 setuptools==25.1.1
 six==1.10.0
