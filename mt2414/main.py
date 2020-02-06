@@ -34,6 +34,7 @@ import requests
 import scrypt
 import psycopg2
 import pymysql
+import unicodedata
 from .FeedbackAligner import FeedbackAligner
 from .JsonExporter import JsonExporter
 
@@ -444,6 +445,7 @@ def sources():
             for i in range(0, len(all_books)):
                 books.append(all_books[i][0])
             convert_file = (read_file.decode('utf-8').replace('\r', ''))
+            convert_file = unicodedata.normalize('NFC',convert_file)
             book_name_check = re.search('(?<=\id )\w{3}', convert_file)
             if not book_name_check:
                 logging.warning('User: \'' + str(email_id) + '(' + str(user_role) +
