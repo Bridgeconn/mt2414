@@ -16,6 +16,8 @@ setup(
         "scrypt",
         "gunicorn",
         "pyexcel",
-        "pyotp"
+        "pyotp",
+        "pyexcel-xlsx",
+        "xlrd"
         ],
 )
