@@ -54,16 +54,16 @@ postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE")
 print("PSQL_Details", sendinblue_key, jwt_hs256_secret, postgres_host,
       postgres_port, postgres_user, postgres_password, postgres_database)
 
-host_api_url = os.environ.get("MT2414_HOST_API_URL")
-host_ui_url = os.environ.get("MT2414_HOST_UI_URL")
+# If MT2414_HOST_API_URL & MT2414_HOST_UI_URL will not found then second local will take
+host_api_url = os.environ.get("MT2414_HOST_API_URL", "http://localhost:8000")
+host_ui_url = os.environ.get("MT2414_HOST_UI_URL", "http://localhost:9000")
+
 mysql_host = os.environ.get("MTV2_HOST", "localhost")
 mysql_port = int(os.environ.get("MTV2_PORT", '3306'))
 mysql_user = os.environ.get("MTV2_USER", "mysql")
 mysql_password = os.environ.get("MTV2_PASSWORD", "secret")
 mysql_database = os.environ.get("MTV2_DATABASE", "postgres")
 
-print("MYSQL_Details", host_api_url, host_ui_url, mysql_host,
-      mysql_port, mysql_user, mysql_password, mysql_database)
 print("Welcome")
 
 
@@ -157,7 +157,7 @@ def new_registration():
     body = '''Hi,<br/><br/>Thanks for your interest to use the AutographaMT web service. <br/>
     You need to confirm your email by opening this link:
 
-    <a href="https://%s/v1/verifications/%s">https://%s/v1/verifications/%s</a>
+    <a href="%s/v1/verifications/%s">%s/v1/verifications/%s</a>
 
     <br/><br/>The documentation for accessing the API is available at <a href="https://docs.autographamt.com">https://docs.autographamt.com</a>''' % (host_api_url, verification_code, host_api_url, verification_code)
     payload = {
@@ -166,6 +166,7 @@ def new_registration():
         "subject": "AutographaMT - Please verify your email address",
         "html": body,
     }
+    logging.warning('Body: \'' + json.dumps(payload) + '\' Email sent for verified')
     connection = get_db()
     password_salt = str(uuid.uuid4()).replace("-", "")
     password_hash = scrypt.hash(password, password_salt)
@@ -343,7 +344,7 @@ def new_registration2(code):
             "UPDATE users SET email_verified = True WHERE verification_code = %s", (code,))
     cursor.close()
     connection.commit()
-    return redirect("https://%s/" % (host_ui_url))
+    return redirect("%s/" % (host_ui_url))
 
 
 # --------------For creating new source (admin) -------------------#
