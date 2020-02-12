@@ -125,18 +125,18 @@ CREATE TABLE targetlanglist (
 );
 
 
--- CREATE TABLE figureofspeach (
--- 	id BIGSERIAL PRIMARY KEY,
--- 	book TEXT,
--- 	chapter TEXT,
--- 	verse TEXT,
--- 	tokentype TEXT,
--- 	reference TEXT,
--- 	note TEXT,
--- 	source_id TEXT,
--- 	revision_num TEXT NOT NULL,
--- 	created_at timestamp with time zone,
--- 	updated_at timestamp with time zone,
--- 	deleted_at timestamp with time zone
--- );
+CREATE TABLE figureofspeach (
+	id BIGSERIAL PRIMARY KEY,
+	book TEXT,
+	chapter TEXT,
+	verse TEXT,
+	tokentype TEXT,
+	reference TEXT,
+	note TEXT,
+	source_id TEXT,
+	revision_num TEXT NOT NULL,
+	created_at timestamp with time zone,
+	updated_at timestamp with time zone,
+	deleted_at timestamp with time zone
+);
 
