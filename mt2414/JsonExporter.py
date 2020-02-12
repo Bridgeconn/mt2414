@@ -224,7 +224,7 @@ class JsonExporter:
         # Fetch Source word list from chopped Bible
 
         src_rst = self.getDataFromDB('LID, Position, Word', self.src_bible_words_table, 'LID', low, high)
-        trg_rst = self.getDataFromDB('LID, Position, Strongs', self.trg_bible_words_table, 'LID', low, high)
+        trg_rst = self.getDataFromDB('LID, Position, Word', self.trg_bible_words_table, 'LID', low, high)
 
         generated_src_text_dict = self.generateTextDictFromDbData(src_rst)
         generated_trg_text_dict = self.generateTextDictFromDbData(trg_rst)

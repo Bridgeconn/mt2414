@@ -55,16 +55,16 @@ postgres_database = os.environ.get("MT2414_POSTGRES_DATABASE")
 print("PSQL_Details", sendinblue_key, jwt_hs256_secret, postgres_host,
       postgres_port, postgres_user, postgres_password, postgres_database)
 
-host_api_url = os.environ.get("MT2414_HOST_API_URL")
-host_ui_url = os.environ.get("MT2414_HOST_UI_URL")
+# If MT2414_HOST_API_URL & MT2414_HOST_UI_URL will not found then second local will take
+host_api_url = os.environ.get("MT2414_HOST_API_URL", "http://localhost:8000")
+host_ui_url = os.environ.get("MT2414_HOST_UI_URL", "http://localhost:9000")
+
 mysql_host = os.environ.get("MTV2_HOST", "localhost")
 mysql_port = int(os.environ.get("MTV2_PORT", '3306'))
 mysql_user = os.environ.get("MTV2_USER", "mysql")
 mysql_password = os.environ.get("MTV2_PASSWORD", "secret")
 mysql_database = os.environ.get("MTV2_DATABASE", "postgres")
 
-print("MYSQL_Details", host_api_url, host_ui_url, mysql_host,
-      mysql_port, mysql_user, mysql_password, mysql_database)
 print("Welcome")
 
 
@@ -158,7 +158,7 @@ def new_registration():
     body = '''Hi,<br/><br/>Thanks for your interest to use the AutographaMT web service. <br/>
     You need to confirm your email by opening this link:
 
-    <a href="https://%s/v1/verifications/%s">https://%s/v1/verifications/%s</a>
+    <a href="%s/v1/verifications/%s">%s/v1/verifications/%s</a>
 
     <br/><br/>The documentation for accessing the API is available at <a href="https://docs.autographamt.com">https://docs.autographamt.com</a>''' % (host_api_url, verification_code, host_api_url, verification_code)
     payload = {
@@ -167,6 +167,8 @@ def new_registration():
         "subject": "AutographaMT - Please verify your email address",
         "html": body,
     }
+    logging.warning('Body: \'' + json.dumps(payload) +
+                    '\' Email sent for verified')
     connection = get_db()
     password_salt = str(uuid.uuid4()).replace("-", "")
     password_hash = scrypt.hash(password, password_salt)
@@ -344,7 +346,7 @@ def new_registration2(code):
             "UPDATE users SET email_verified = True WHERE verification_code = %s", (code,))
     cursor.close()
     connection.commit()
-    return redirect("https://%s/" % (host_ui_url))
+    return redirect("%s/" % (host_ui_url))
 
 
 # --------------For creating new source (admin) -------------------#
@@ -439,14 +441,14 @@ def sources():
             cursor = connection.cursor()
             changes = []
             books = []
-            cursor.execute(
-                "SELECT book_name, content, revision_num from sourcetexts WHERE source_id = %s", (source_id,))
+            cursor.execute("SELECT book_name, content, revision_num from sourcetexts WHERE source_id = %s", (source_id,))
             all_books = cursor.fetchall()
             for i in range(0, len(all_books)):
                 books.append(all_books[i][0])
             convert_file = (read_file.decode('utf-8').replace('\r', ''))
             convert_file = unicodedata.normalize('NFC',convert_file)
-            book_name_check = re.search('(?<=\id )\w{3}', convert_file)
+            book_name_check = re.search(r'(?<=\\id )\w{3}', convert_file)
+
             if not book_name_check:
                 logging.warning('User: \'' + str(email_id) + '(' + str(user_role) +
                                 ')\'. File content \'' + str(content) + '\' in incorrect format.')
@@ -474,7 +476,7 @@ def sources():
                     for t in token_set:
                         cursor.execute("INSERT INTO cluster (token, book_name, revision_num, source_id) VALUES (%s, %s, %s, %s)", (t.decode(
                             "utf-8"), book_name, revision_num, source_id))
-            elif book_name not in books:
+            if book_name not in books:
                 revision_num = 1
                 cursor.execute("INSERT INTO sourcetexts (book_name, content, source_id, revision_num) VALUES (%s, %s, %s, %s)", (
                     book_name, text_file, source_id, revision_num))
@@ -702,11 +704,18 @@ def bookwiseagt(excel_status):
         return '{"success":false, "message":"Source is not available. Upload source."}'
     else:
         book_name = []
+        # idioms_bkname = []
         cursor.execute(
             "SELECT book_name FROM cluster WHERE source_id =%s AND revision_num = %s", (source_id[0], revision))
         rst = cursor.fetchall()
         for bkn in rst:
             book_name.append(bkn[0])
+
+        # cursor.execute("SELECT book FROM figureofspeach WHERE source_id =%s AND revision_num = %s", (source_id, revision_num))
+        # rst_idioms = cursor.fetchall()
+        # for bkname in rst_idioms:
+        #     idioms_bkname.append(bkname[0])
+
         # to check include_books in book_name (book_name contains books that fetch from database)
         b = set(include_books) - set(book_name)
         # to check exclude_books in book_name (book_name contains books that fetch from database)
@@ -726,7 +735,17 @@ def bookwiseagt(excel_status):
                     tokens = cursor.fetchall()
                     for t in tokens:
                         token_list.append(t[0])
+                
+                for idioms_bkn in include_books:
+                    # try:
+                    cursor.execute("SELECT reference FROM figureofspeach WHERE source_id =%s AND revision_num = %s AND book = %s", (str(source_id[0]), str(revision), idioms_bkn))
+                    idiom_token = cursor.fetchall()
+                    for id_token in idiom_token:
+                        token_list.append(id_token[0])
+                    # except:
+                    #     print("pass")
                 token_set = set(token_list) - set(translated_tokens)
+
                 cursor.close()
                 result = [['TOKEN', 'TRANSLATION']]
                 for i in list(token_set):
@@ -749,6 +768,14 @@ def bookwiseagt(excel_status):
                     tokens = cursor.fetchall()
                     for t in tokens:
                         token_list.append(t[0])
+
+                for idioms_bkn in include_books:
+                    # try:
+                    cursor.execute("SELECT reference FROM figureofspeach WHERE source_id =%s AND revision_num = %s AND book = %s", (str(source_id[0]), str(revision), idioms_bkn))
+                    idiom_token = cursor.fetchall()
+                    for id_token in idiom_token:
+                        token_list.append(id_token[0])
+
                 exclude_tokens = []
                 for bkn in exclude_books:
                     cursor.execute(
@@ -756,11 +783,19 @@ def bookwiseagt(excel_status):
                     ntokens = cursor.fetchall()
                     for t in ntokens:
                         exclude_tokens.append(t[0])
+                
+                for idioms_bkn in exclude_books:
+                    # try:
+                    cursor.execute("SELECT reference FROM figureofspeach WHERE source_id =%s AND revision_num = %s AND book = %s", (str(source_id[0]), str(revision), idioms_bkn))
+                    idiom_token = cursor.fetchall()
+                    for id_token in idiom_token:
+                        exclude_tokens.append(id_token[0])
+
                 set_toknwords = set(token_list) - set(exclude_tokens)
                 token_set = set(set_toknwords) - set(translated_tokens)
                 cursor.close()
                 result = [['TOKEN', 'TRANSLATION']]
-                for i in list(token_set):
+                for i in list(set_toknwords):
                     result.append([i])
                 sheet = pyexcel.Sheet(result)
                 output = flask.make_response(sheet.xlsx)
@@ -1312,7 +1347,76 @@ def get_concordance():
         return json.dumps(concordance)
 
 
-# ---------------To download translation draft-------------------#
+# # ---------------To download translation draft-------------------#
+# @app.route("/v1/translations", methods=["POST"])
+# @check_token
+# def translations():
+#     req = request.get_json(True)
+#     sourcelang = req["sourcelang"]
+#     targetlang = req["targetlang"]
+#     version = req["version"]
+#     revision = req["revision"]
+#     books = req["books"]
+#     if len(books) == 0:
+#         logging.warning('User: \'' + str(request.email) +
+#                         '\'. Translation draft generation unsuccessful as no books were selected by user')
+#         return '{"success":false, "message":"Select the books to be Translated."}'
+#     connection = get_db()
+#     cursor = connection.cursor()
+#     tokens = {}
+#     token_phrase = {}
+#     cursor.execute(
+#         "SELECT id FROM sources WHERE language = %s AND version = %s", (sourcelang, version))
+#     rst = cursor.fetchone()
+#     if not rst:
+#         logging.warning('User: \'' + str(request.email) +
+#                         '\'. Source selected by the user is not available.')
+#         return '{"success":false, "message":"Source is not available. Upload it"}'
+#     else:
+#         source_id = rst[0]
+#         cursor.execute(
+#             "SELECT token, translated_token FROM autotokentranslations WHERE targetlang = %s AND source_id = %s AND translated_token IS NOT NULL", (targetlang, source_id))
+#         for t, tt in cursor.fetchall():
+#             if tt:
+#                 split_tokens = tt.split()
+#                 if (len(split_tokens) > 3):
+#                     token_phrase[t] = tt
+#                 else:
+#                     tokens[t] = tt
+#         tr = {}  # To store untranslated tokens
+
+#         for book in books:
+#             cursor.execute(
+#                 "SELECT content FROM sourcetexts WHERE source_id = %s AND revision_num = %s and book_name = %s", (source_id, revision, book))
+#             source_content = cursor.fetchone()
+#             if source_content:
+#                 newSource = []
+#                 book_name = (re.search(r'(?<=\\id )\w+', source_content[0])).group(0)
+#                 print(book_name)
+#                 for line in source_content[0].split('\n'):
+#                     edit_content = line
+#                     for k, v in token_phrase.items():
+#                         search1 = re.search(k,line)
+#                         if search1:
+#                             search_content = search1.group(0)
+#                             edit_content = edit_content.replace(search_content, v)
+#                     for k1, v2 in tokens.items():
+#                         search2 = re.search(k1,edit_content)
+#                         if search2:
+#                             search_content1 = search2.group(0)
+#                             edit_content = edit_content.replace(search_content1, v2)
+#                     newSource.append(edit_content)
+#                 tr["untranslated"] = "EMPTY"
+#                 tr[book_name] = '\n'.join(newSource)
+            
+#         cursor.close()
+#         connection.commit()
+#         return json.dumps(tr)
+
+
+
+
+
 @app.route("/v1/translations", methods=["POST"])
 @check_token
 def translations():
@@ -1331,6 +1435,7 @@ def translations():
     connection = get_db()
     cursor = connection.cursor()
     tokens = {}
+    token_phrase = {}
     cursor.execute(
         "SELECT id FROM sources WHERE language = %s AND version = %s", (sourcelang, version))
     rst = cursor.fetchone()
@@ -1344,7 +1449,12 @@ def translations():
             "SELECT token, translated_token FROM autotokentranslations WHERE targetlang = %s AND source_id = %s AND translated_token IS NOT NULL", (targetlang, source_id))
         for t, tt in cursor.fetchall():
             if tt:
-                tokens[t] = tt
+                # split_tokens = tt
+                if (len(tt) > 20):
+                    token_phrase[t] = tt
+                    tokens[t] = tt
+                else:
+                    tokens[t] = tt
         tr = {}  # To store untranslated tokens
         # Can be replaced with string.punctuation. But an extra character '``' is added here
         punctuations = ['!', '#', '$', '%', '"', '—', "'", "``", '&',
@@ -1360,16 +1470,30 @@ def translations():
             source_content = cursor.fetchone()
             if source_content:
                 out_text_lines = []
-                book_name = (re.search(r'(?<=\\id )\w+',
-                                       source_content[0])).group(0)
+                book_name = (re.search(r'(?<=\\id )\w+', source_content[0])).group(0)
                 changes.append(book_name)
                 hyphenated_words = re.findall(r'\w+-\w+', source_content[0])
-                content = re.sub(
-                    r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
+                content = re.sub(r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
                 single_quote_count = 0
                 double_quotes_count = 0
+                # newSource = []
                 for line in content.split('\n'):
-                    line_words = nltk.word_tokenize(line)
+                    edit_content = line
+                    for k, v in token_phrase.items():
+                        search1 = re.search(k,line)
+                        if search1:
+                            search_content = search1.group(0)
+                            edit_content = edit_content.replace(search_content, v)
+                    # for k1, v2 in tokens.items():
+                    #     search2 = re.search(k1,edit_content)
+                    #     if search2:
+                    #         search_content1 = search2.group(0)
+                    #         edit_content = edit_content.replace(search_content1, v2)
+                    # newSource.append(edit_content)
+
+                    line_words = nltk.word_tokenize(edit_content)
+                    print(line_words)
+
                     new_line_words = []
                     for word in line_words:
                         if word in punctuations:
@@ -1399,6 +1523,7 @@ def translations():
                     out_line = ' '.join(new_line_words)
                     out_line1 = re.sub("  ", "", out_line)
                     out_text_lines.append(out_line1)
+                
                 filtern = list(filter(None, out_text_lines))
                 out_text = '\n'.join(filtern)
                 for w in hyphenated_words:
@@ -1414,8 +1539,7 @@ def translations():
                 out_final = re.sub(r"(\\v) (\d+)(')", r'\1 \2 \3', out_final)
                 out_final = re.sub('(\\v) (\d+)(")', r'\1 \2 \3', out_final)
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
-                out_final = re.sub(r'(\\id .*)', r'\\id ' +
-                                   str(book_name), out_final)
+                out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
                 tr["untranslated"] = "\n".join(list(set(untranslated)))
                 tr[book_name] = out_final
