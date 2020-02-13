@@ -389,10 +389,11 @@ def create_sources():
 def tokenise(content, book_name):  # --------------To generate tokens -------------------#
     rem_id = re.sub(r'\\\w+','',content)
     rem_numbers = re.sub(r'\d+','',rem_id)
-    rem_punctuation = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।0123456789cvpsSAQqCHPETIidmJNa])','',rem_numbers)
+    rem_punctuation = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।])','',rem_numbers)
     rem_bookName = re.sub(r'—|-',' ',rem_punctuation)
     remov_unwanted = re.sub(r'UTF|UF','',rem_bookName)
     token_list = nltk.word_tokenize(remov_unwanted)
+    # print(token_list)
     token_set = set([x.encode('utf-8') for x in token_list])
     return token_set
 
@@ -1449,7 +1450,7 @@ def translations():
         for t, tt in cursor.fetchall():
             if tt:
                 split_tokens = t.split()
-                if (len(split_tokens) > 2):
+                if (len(split_tokens) > 1):
                     token_phrase[t] = tt
                     tokens[t] = tt
                 else:
@@ -1488,8 +1489,9 @@ def translations():
                     #         search_content1 = search2.group(0)
                     #         edit_content = edit_content.replace(search_content1, v2)
                     # newSource.append(edit_content)
-                    # print(edit_content)
-                    line_words = nltk.word_tokenize(edit_content)
+                    split_pun = re.sub(r'—|-',' ',edit_content)
+                    splict_f = split_pun.replace('\\f',' \\f')
+                    line_words = nltk.word_tokenize(splict_f)
                     new_line_words = []
                     for word in line_words:
                         if word in punctuations:
@@ -1537,7 +1539,7 @@ def translations():
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
                 out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
-                tr["untranslated"] = "\n".join(list(set(untranslated)))
+                tr["untranslated"] = "Go to Download token and download the remaining tokens"
                 tr[book_name] = out_final
             else:
                 changes1.append(book)
