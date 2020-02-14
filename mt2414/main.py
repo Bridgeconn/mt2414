@@ -202,7 +202,7 @@ def reset_password():
         body = '''Hi,<br/><br/>your request for resetting the password has been recieved. <br/>
         Your temporary password is %s. Enter your new password by opening this link:
 
-        <a href="https://%s/forgotpassword">https://%s/forgotpassword</a>
+        <a href="%s/forgotpassword">%s/forgotpassword</a>
 
         <br/><br/>The documentation for accessing the API is available at <a href="https://docs.autographamt.com">https://docs.autographamt.com</a>''' % (verification_code, host_ui_url, host_ui_url)
         payload = {
@@ -387,11 +387,11 @@ def create_sources():
 
 
 def tokenise(content, book_name):  # --------------To generate tokens -------------------#
-    rem_id = re.sub(r'\\\w+','',content)
-    rem_numbers = re.sub(r'\d+','',rem_id)
-    rem_punctuation = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।])','',rem_numbers)
-    rem_bookName = re.sub(r'—|-',' ',rem_punctuation)
-    remov_unwanted = re.sub(r'UTF|UF','',rem_bookName)
+    rem_id = re.sub(r'\\\w+',' ',content)
+    rem_numbers = re.sub(r'\d+',' ',rem_id)
+    rem_punctuation = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।])',' ',rem_numbers)
+    # rem_bookName = re.sub(r'—|-',' ',rem_punctuation)
+    remov_unwanted = re.sub(r'UTF|UF',' ',rem_punctuation)
     token_list = nltk.word_tokenize(remov_unwanted)
     # print(token_list)
     token_set = set([x.encode('utf-8') for x in token_list])
@@ -545,13 +545,13 @@ def available_languages():
     cursor.execute(
         "SELECT s.language, s.version FROM sources s  LEFT JOIN sourcetexts st ON st.source_id = s.id")
     rst = cursor.fetchall()
-    languages = set()
+    languages = []
     if not rst:
         return '{"success":false, "message":"No sources"}'
     else:
         for lan in range(0, len(rst)):
-            languages.add(rst[lan])
-        language_list = list(languages)
+            languages.append(rst[lan])
+        language_list = languages
         cursor.close()
         return json.dumps(language_list)
 
@@ -694,6 +694,7 @@ def bookwiseagt(excel_status):
     targetlang = req["targetlang"]
     if len(include_books) == 0:
         return '{"success":false, "message":"Select any books from include books."}', 400
+    
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute(
@@ -1489,9 +1490,10 @@ def translations():
                     #         search_content1 = search2.group(0)
                     #         edit_content = edit_content.replace(search_content1, v2)
                     # newSource.append(edit_content)
-                    split_pun = re.sub(r'—|-',' ',edit_content)
-                    splict_f = split_pun.replace('\\f',' \\f')
+                    # split_pun = re.sub(r'—|-',' ',edit_content)
+                    splict_f = edit_content.replace('\\f',' \\f')
                     line_words = nltk.word_tokenize(splict_f)
+                    print(line_words)
                     new_line_words = []
                     for word in line_words:
                         if word in punctuations:
