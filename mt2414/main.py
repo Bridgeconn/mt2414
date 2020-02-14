@@ -387,10 +387,14 @@ def create_sources():
             return '{"success":false, "message":"You don\'t have permission to access this page"}'
 
 
-def tokenise(content):  # --------------To generate tokens -------------------#
-    remove_punct = re.sub(
-        r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।0123456789cvpsSAQqCHPETIidmJNa])', '', content)
-    token_list = nltk.word_tokenize(remove_punct)
+def tokenise(content, book_name):  # --------------To generate tokens -------------------#
+    rem_id = re.sub(r'\\\w+','',content)
+    rem_numbers = re.sub(r'\d+','',rem_id)
+    rem_punctuation = re.sub(r'([!"#$%&\\\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~\”\“\‘\’।])','',rem_numbers)
+    rem_bookName = re.sub(r'—|-',' ',rem_punctuation)
+    remov_unwanted = re.sub(r'UTF|UF','',rem_bookName)
+    token_list = nltk.word_tokenize(remov_unwanted)
+    # print(token_list)
     token_set = set([x.encode('utf-8') for x in token_list])
     return token_set
 
@@ -455,8 +459,7 @@ def sources():
                 return '{"success":false, "message":"Upload Failed. File content in incorrect format."}'
             book_name = book_name_check.group(0)
             text_file = re.sub(r'(\\rem.*)', '', convert_file)
-            text_file = re.sub('(\\\\id .*)', '\\id ' +
-                               str(book_name), text_file)
+            text_file = re.sub('(\\\\id .*)', '\\id ' + str(book_name), text_file)
             if book_name in books:
                 count = 0
                 count1 = 0
@@ -472,7 +475,7 @@ def sources():
                     changes.append(book_name)
                     logging.warning('User: \'' + str(email_id) + '(' + str(user_role) +
                                     ')\' uploaded revised version of \'' + str(book_name) + '\'. Source Id: ' + str(source_id))
-                    token_set = tokenise(text_file)
+                    token_set = tokenise(text_file,book_name)
                     for t in token_set:
                         cursor.execute("INSERT INTO cluster (token, book_name, revision_num, source_id) VALUES (%s, %s, %s, %s)", (t.decode(
                             "utf-8"), book_name, revision_num, source_id))
@@ -483,7 +486,7 @@ def sources():
                 logging.warning('User: \'' + str(email_id) + '(' + str(user_role) +
                                 ')\' uploaded new book \'' + str(book_name) + '\'. Source Id: ' + str(source_id))
                 changes.append(book_name)
-                token_set = tokenise(text_file)
+                token_set = tokenise(text_file, book_name)
                 for t in token_set:
                     cursor.execute("INSERT INTO cluster (token, book_name, revision_num, source_id) VALUES (%s, %s, %s, %s)", (t.decode(
                         "utf-8"), book_name, revision_num, source_id))
@@ -1449,8 +1452,8 @@ def translations():
             "SELECT token, translated_token FROM autotokentranslations WHERE targetlang = %s AND source_id = %s AND translated_token IS NOT NULL", (targetlang, source_id))
         for t, tt in cursor.fetchall():
             if tt:
-                # split_tokens = tt
-                if (len(tt) > 20):
+                split_tokens = t.split()
+                if (len(split_tokens) > 1):
                     token_phrase[t] = tt
                     tokens[t] = tt
                 else:
@@ -1476,7 +1479,6 @@ def translations():
                 content = re.sub(r'([!"#$%&\'\(\)\*\+,\.\/:;<=>\?\@\[\]^_`{|\}~।\”\“\‘\’])', r' \1 ', source_content[0])
                 single_quote_count = 0
                 double_quotes_count = 0
-                # newSource = []
                 for line in content.split('\n'):
                     edit_content = line
                     for k, v in token_phrase.items():
@@ -1490,10 +1492,9 @@ def translations():
                     #         search_content1 = search2.group(0)
                     #         edit_content = edit_content.replace(search_content1, v2)
                     # newSource.append(edit_content)
-
-                    line_words = nltk.word_tokenize(edit_content)
-                    print(line_words)
-
+                    split_pun = re.sub(r'—|-',' ',edit_content)
+                    splict_f = split_pun.replace('\\f',' \\f')
+                    line_words = nltk.word_tokenize(splict_f)
                     new_line_words = []
                     for word in line_words:
                         if word in punctuations:
@@ -1515,7 +1516,7 @@ def translations():
                         # TODO: Delete tag_check
                         elif not pattern_match.match(word):
                             new_line_words.append(tokens.get(
-                                word, ">>>"+str(word)+"<<<"))
+                                word, str(word)))
                             if word not in tokens:
                                 untranslated.append(word)
                         else:
@@ -1541,7 +1542,7 @@ def translations():
                 out_final = re.sub(r'\\ide .*', '\\\\ide UTF-8', out_final)
                 out_final = re.sub(r'(\\id .*)', r'\\id ' + str(book_name), out_final)
                 out_final = re.sub(r'\\rem.*', '', out_final)
-                tr["untranslated"] = "\n".join(list(set(untranslated)))
+                tr["untranslated"] = "Go to Download token and download the remaining tokens"
                 tr[book_name] = out_final
             else:
                 changes1.append(book)
