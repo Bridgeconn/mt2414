@@ -995,7 +995,7 @@ def upload_tokens_translation():
                 if v:
                     if k not in token_list:
                         cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                            k, v, targetlang, revision, source_id[0]))
+                            k, v.strip(), targetlang, revision, source_id[0]))
                         changes.append(v)
             cursor.close()
             connection.commit()
@@ -1006,7 +1006,7 @@ def upload_tokens_translation():
             for k, v in dic.items():
                 if v:
                     cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                        k, v, targetlang, revision, source_id[0]))
+                        k, v.strip(), targetlang, revision, source_id[0]))
                     changes.append(v)
             cursor.close()
             connection.commit()
@@ -1142,11 +1142,11 @@ def update_tokens_translation():
                         if v:
                             if k in token_list:
                                 cursor.execute("UPDATE autotokentranslations SET translated_token = %s WHERE token = %s AND source_id = %s AND targetlang = %s AND revision_num = %s", (
-                                    v, k, source_id[0], targetlang, revision))
+                                    v.strip(), k, source_id[0], targetlang, revision))
                                 changes.append(k)
                             else:
                                 cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                                    k, v, targetlang, revision, source_id[0]))
+                                    k, v.strip(), targetlang, revision, source_id[0]))
                                 changes.append(k)
                     cursor.close()
                     connection.commit()
@@ -1157,7 +1157,7 @@ def update_tokens_translation():
                     for k, v in dic.items():
                         if v:
                             cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                                k, v, targetlang, revision, source_id[0]))
+                                k, v.strip(), targetlang, revision, source_id[0]))
                             changes.append(k)
                     cursor.close()
                     connection.commit()
@@ -1493,7 +1493,7 @@ def translations():
                     # split_pun = re.sub(r'—|-',' ',edit_content)
                     splict_f = edit_content.replace('\\f',' \\f')
                     line_words = nltk.word_tokenize(splict_f)
-                    print(line_words)
+                    # print(line_words)
                     new_line_words = []
                     for word in line_words:
                         if word in punctuations:
