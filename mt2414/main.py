@@ -944,7 +944,6 @@ def tokencount():
             cursor.close()
             return json.dumps(result)
 
-
 # -------------To upload token translation to database (excel file)--------------#
 @app.route("/v1/uploadtokentranslation", methods=["POST"])
 @check_token
@@ -995,7 +994,7 @@ def upload_tokens_translation():
                 if v:
                     if k not in token_list:
                         cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                            k, v.strip(), targetlang, revision, source_id[0]))
+                            str(k), str(v).strip(), targetlang, revision, source_id[0]))
                         changes.append(v)
             cursor.close()
             connection.commit()
@@ -1006,7 +1005,7 @@ def upload_tokens_translation():
             for k, v in dic.items():
                 if v:
                     cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                        k, v.strip(), targetlang, revision, source_id[0]))
+                        str(k), str(v).strip(), targetlang, revision, source_id[0]))
                     changes.append(v)
             cursor.close()
             connection.commit()
@@ -1142,11 +1141,11 @@ def update_tokens_translation():
                         if v:
                             if k in token_list:
                                 cursor.execute("UPDATE autotokentranslations SET translated_token = %s WHERE token = %s AND source_id = %s AND targetlang = %s AND revision_num = %s", (
-                                    v.strip(), k, source_id[0], targetlang, revision))
+                                    str(v).strip(), str(k), source_id[0], targetlang, revision))
                                 changes.append(k)
                             else:
                                 cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                                    k, v.strip(), targetlang, revision, source_id[0]))
+                                    str(k), str(v).strip(), targetlang, revision, source_id[0]))
                                 changes.append(k)
                     cursor.close()
                     connection.commit()
@@ -1156,8 +1155,9 @@ def update_tokens_translation():
                 else:
                     for k, v in dic.items():
                         if v:
+
                             cursor.execute("INSERT INTO autotokentranslations (token, translated_token, targetlang, revision_num, source_id) VALUES (%s, %s, %s, %s, %s)", (
-                                k, v.strip(), targetlang, revision, source_id[0]))
+                                str(k), str(v).strip(), targetlang, revision, source_id[0]))
                             changes.append(k)
                     cursor.close()
                     connection.commit()
