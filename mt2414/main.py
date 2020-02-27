@@ -520,11 +520,17 @@ def languagelist():
 @app.route("/v1/updatelanguagelist", methods=["GET"])
 @check_token
 def updatelanguagelist():
-    with urllib.request.urlopen("http://td.unfoldingword.org/exports/langnames.json") as url:
+    with urllib.request.urlopen("https://raw.githubusercontent.com/unfoldingWord/translationCore/develop/src/assets/langnames.json") as url:
         data = json.loads(url.read().decode())
         tr = {}
         for item in data:
-            tr[item["ang"]] = item["lc"]
+            lang_code = item["lc"]
+            if(item["ang"]):
+                if(item["alt"]):
+                    new_alt_lan = (item["alt"])
+                    for i in new_alt_lan:
+                        tr[i] = i+"_"+lang_code 
+                tr[item["ang"]] = item["lc"]
         db_item = pickle.dumps(tr)
         connection = get_db()
         cursor = connection.cursor()
