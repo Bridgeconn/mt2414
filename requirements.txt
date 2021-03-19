@@ -5,7 +5,7 @@ Flask-JWT==0.3.2
 Flask-RESTful==0.3.5
 gunicorn==19.6.0
 itsdangerous==0.24
-Jinja2==2.8.1
+Jinja2==2.11.3
 MarkupSafe==0.23
 # -e git+ssh://git@bitbucket.org/baijum/mt2414.git@5752b7e6c92fb52bb02e116c6233f09fbe5158d7#egg=mt2414
 nltk==3.2.2
