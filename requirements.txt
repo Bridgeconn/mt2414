@@ -9,7 +9,7 @@ Jinja2==2.8.1
 MarkupSafe==0.23
 # -e git+ssh://git@bitbucket.org/baijum/mt2414.git@5752b7e6c92fb52bb02e116c6233f09fbe5158d7#egg=mt2414
 nltk==3.2.2
-pip==9.0.1
+pip==19.2
 # polib==1.0.8
 psycopg2==2.7.4
 PyJWT==1.4.2
